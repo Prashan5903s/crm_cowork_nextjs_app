@@ -214,13 +214,9 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             </SubMenu>
           )}
           {permissArray?.isCompany && (
-            <SubMenu label={'Asset Management'} icon={<i className='tabler-receipt' />}>
-              <MenuItem href={`/${locale}/apps/asset-management/location-category`}>{'Locaion & Category'}</MenuItem>
-              <MenuItem href={`/${locale}/apps/asset-management/vendor`}>{'Vendor'}</MenuItem>
-              <MenuItem href={`/${locale}/apps/asset-management/amc`}>{'AMC'}</MenuItem>
-              <MenuItem href={`/${locale}/apps/asset-management/inspection`}>{'inspection'}</MenuItem>
-              <MenuItem href={`/${locale}/apps/asset-management/inspection-schedule`}>{'inspection Schedule'}</MenuItem>
-              <MenuItem href={`/${locale}/apps/asset-management`}>{'View Asset'}</MenuItem>
+            <SubMenu label={'Property Management'} icon={<i className='tabler-receipt' />}>
+              <MenuItem href={`/${locale}/apps/property`}>{'View property'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/property/create`}>{'Add property'}</MenuItem>
             </SubMenu>
           )}
           {permissArray?.isCompany &&
@@ -258,18 +254,26 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           )}
           {permissArray?.isCompany && (
             <SubMenu label={'Amenity Management'} icon={<i className='tabler-building-community' />}>
-              <MenuItem href={`/${locale}/apps/amenity/list`}>{'List'}</MenuItem>
-              <MenuItem href={`/${locale}/apps/amenity/booking`}>{'Booking'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/amenity/list`}>{'View Amenity'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/amenity/create`}>{'Add Amenity'}</MenuItem>
             </SubMenu>
           )}
-          {permissArray?.isCompany && permissArray?.hasAnnouncementPermission && (
-            <MenuItem
-              key='announcement'
-              href={`/${locale}/apps/announcement`}
-              sx={{ display: 'flex', alignItems: 'center' }}
+          {permissArray?.isCompany && (
+            <SubMenu
+              label="Asset Management"
+              icon={<i className="tabler-building-warehouse" />}
             >
-              <i className='tabler-notes' style={{ marginRight: 8, fontSize: '1.2rem' }} />
-              Announcement
+              <MenuItem href={`/${locale}/apps/asset-management`}>{'View Asset'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/asset-management/create`}>{'Add Asset'}</MenuItem>
+            </SubMenu>
+          )}
+          {permissArray?.isCompany && (
+            <MenuItem
+              key='contacts'
+              href={`/${locale}/apps/contacts`}
+              icon={<i className='tabler-address-book' />}
+            >
+              Contacts
             </MenuItem>
           )}
           {permissArray?.isCompany && (
@@ -321,7 +325,20 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           )}
           {permissArray?.isCompany && (
             <SubMenu label={'Settings'} icon={<i className='tabler-settings' />}>
-              <MenuItem href={`/${locale}/apps/settings/property-type-setting`}>{'Property Types'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/settings/asset-category-setting`}>{'Asset Category'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/settings/amenity-type-setting`}>{'Amenity Types'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/settings/contact-category-setting`}>{'Contact Category'}</MenuItem>
+
+              <SubMenu label={'Lead'}>
+                <MenuItem href={`/${locale}/apps/settings/lead-status-setting`}>{'Lead Status'}</MenuItem>
+              </SubMenu>
+
+              <SubMenu label={'Property'}>
+                <MenuItem href={`/${locale}/apps/settings/property-type-setting`}>{'Property Types'}</MenuItem>
+                <MenuItem href={`/${locale}/apps/settings/property-category-setting`}>{'Property Categories'}</MenuItem>
+                <MenuItem href={`/${locale}/apps/settings/property-group-setting`}>{'Property Groups'}</MenuItem>
+              </SubMenu>
+
               <MenuItem href={`/${locale}/apps/settings/maintenance-setting`}>{'Maintenances'}</MenuItem>
               <MenuItem href={`/${locale}/apps/settings/sla-setting`}>{'SLA config'}</MenuItem>
               <MenuItem href={`/${locale}/apps/settings/ticket-type-setting`}>{'Ticket Types'}</MenuItem>
@@ -330,7 +347,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           )}
         </MenuSection>
       </Menu>
-    </ScrollWrapper>
+    </ScrollWrapper >
   )
 }
 

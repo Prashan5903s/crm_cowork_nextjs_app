@@ -160,7 +160,7 @@ const PropertyTable = ({ tableData, fetchZoneData }) => {
       header: 'Actions',
       cell: ({ row }) => (
         <div className='flex items-center'>
-          { (
+          {(
             <IconButton
               onClick={() => {
                 setSelectedZone(row.original)
@@ -218,11 +218,12 @@ const PropertyTable = ({ tableData, fetchZoneData }) => {
             onChange={value => setGlobalFilter(String(value))}
             placeholder='Search Tower'
           />
-          <Button variant='contained' size='small' onClick={() => {
-            setOpenDialog(true)
-            setSelectedZone()
-            setSelectedRegion()
-          }}>
+          <Button variant='contained'
+            onClick={() => {
+              setOpenDialog(true)
+              setSelectedZone()
+              setSelectedRegion()
+            }}>
             Add Property Type
           </Button>
           {/* <CustomTextField
