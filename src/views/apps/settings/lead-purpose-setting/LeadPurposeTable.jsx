@@ -20,7 +20,9 @@ import {
 
 // Third-party Imports
 import classnames from 'classnames'
+
 import { rankItem } from '@tanstack/match-sorter-utils'
+
 import {
   createColumnHelper,
   flexRender,
@@ -34,14 +36,13 @@ import {
   getSortedRowModel
 } from '@tanstack/react-table'
 
-// Component Imports
-import OptionMenu from '@core/components/option-menu'
+// Component Import
 import CustomTextField from '@core/components/mui/TextField'
 import TablePaginationComponent from '@components/TablePaginationComponent'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-import VisitorDialog from '@/components/dialogs/visitor-type-dialog/page'
+import LeadPurposeDialog from '@/components/dialogs/lead-purpose-dialog/page'
 import { usePermissionList } from '@/utils/getPermission'
 
 // Filter function
@@ -78,7 +79,7 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...prop
 const columnHelper = createColumnHelper()
 
 // States
-const TowerTable = ({ tableData, fetchZoneData }) => {
+const LeadPurposeTable = ({ tableData, fetchZoneData }) => {
   const [role, setRole] = useState('')
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState([])
@@ -148,7 +149,7 @@ const TowerTable = ({ tableData, fetchZoneData }) => {
       )
     },
     columnHelper.accessor('name', {
-      header: 'Visitor Type Name',
+      header: 'Lead Purpose Name',
       cell: ({ row }) => (
         <Typography className='capitalize' color='text.primary'>
           {row.original.name}
@@ -159,7 +160,7 @@ const TowerTable = ({ tableData, fetchZoneData }) => {
       header: 'Actions',
       cell: ({ row }) => (
         <div className='flex items-center'>
-          {permissions && permissions?.['hasTowerEditPermission'] && (
+          {(
             <IconButton
               onClick={() => {
                 setSelectedZone(row.original)
@@ -217,12 +218,13 @@ const TowerTable = ({ tableData, fetchZoneData }) => {
             onChange={value => setGlobalFilter(String(value))}
             placeholder='Search Tower'
           />
-          <Button variant='contained' size='small' onClick={() => {
-            setOpenDialog(true)
-            setSelectedZone()
-            setSelectedRegion()
-          }}>
-            Add Visitor Type
+          <Button variant='contained'
+            onClick={() => {
+              setOpenDialog(true)
+              setSelectedZone()
+              setSelectedRegion()
+            }}>
+            Add Lead Purpose
           </Button>
           {/* <CustomTextField
             select
@@ -297,7 +299,7 @@ const TowerTable = ({ tableData, fetchZoneData }) => {
 
       {/* Role Dialog */}
       {openDialog && (
-        <VisitorDialog
+        <LeadPurposeDialog
           open={openDialog}
           setOpen={setOpenDialog}
           selectedZone={selectedZone}
@@ -309,4 +311,4 @@ const TowerTable = ({ tableData, fetchZoneData }) => {
   )
 }
 
-export default TowerTable
+export default LeadPurposeTable

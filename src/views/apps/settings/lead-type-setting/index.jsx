@@ -4,23 +4,19 @@
 
 import { useState, useEffect } from 'react'
 
-import { useParams } from 'next/navigation'
-
 import { useSession } from 'next-auth/react'
 
 import Typography from '@mui/material/Typography'
 
 import Grid from '@mui/material/Grid2'
 
-import TowerTable from './VisitorType'
-
-import TowerCards from './VisitorTypeCards'
+import LeadTypeTable from './LeadTypeTable'
 
 import SkeletonTableComponent from '@/components/skeleton/table/page'
 
-const Towers = () => {
+const LeadType = () => {
 
-  const [towerData, setTowerData] = useState();
+  const [leadTypeData, setLeadTypeData] = useState();
   const [loading, setLoading] = useState(false);
 
   const URL = process.env.NEXT_PUBLIC_API_URL;
@@ -31,8 +27,9 @@ const Towers = () => {
 
   async function fetchTowerData() {
 
+    setLoading(false)
     try {
-      const response = await fetch(`${URL}/company/visitor-type`,
+      const response = await fetch(`${URL}/company/lead-type `,
         {
           method: "GET",
           headers: {
@@ -45,7 +42,7 @@ const Towers = () => {
 
       if (response.ok) {
         setLoading(true);
-        setTowerData(datas?.data);
+        setLeadTypeData(datas?.data);
       } else {
 
       }
@@ -67,12 +64,12 @@ const Towers = () => {
     <Grid container spacing={6}>
       <Grid size={{ xs: 12 }}>
         <Typography variant='h4' className='mbe-1'>
-          Visitor Type List
+          Lead Type List
         </Typography>
       </Grid>
       <Grid size={{ xs: 12 }}>
-        {towerData ? (
-          <TowerTable tableData={towerData} fetchZoneData={fetchTowerData} />
+        {loading ? (
+          <LeadTypeTable tableData={leadTypeData} fetchZoneData={fetchTowerData} />
         )
           : (
             <SkeletonTableComponent />
@@ -83,4 +80,4 @@ const Towers = () => {
   )
 }
 
-export default Towers
+export default LeadType

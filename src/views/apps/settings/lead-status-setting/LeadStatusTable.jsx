@@ -36,14 +36,13 @@ import {
   getSortedRowModel
 } from '@tanstack/react-table'
 
-// Component Imports
-import OptionMenu from '@core/components/option-menu'
+// Component Import
 import CustomTextField from '@core/components/mui/TextField'
 import TablePaginationComponent from '@components/TablePaginationComponent'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-import AmenityTypeDialog from '@/components/dialogs/amenity-type-dialog/page'
+import LeadStatusDialog from '@/components/dialogs/lead-status-dialog/page'
 import { usePermissionList } from '@/utils/getPermission'
 
 // Filter function
@@ -150,12 +149,49 @@ const AmenityTable = ({ tableData, fetchZoneData }) => {
       )
     },
     columnHelper.accessor('name', {
-      header: 'Amenity Type Name',
+      header: 'Lead Status Name',
       cell: ({ row }) => (
         <Typography className='capitalize' color='text.primary'>
           {row.original.name}
         </Typography>
       )
+    }),
+    columnHelper.accessor('color', {
+      header: 'Lead Status Color',
+      cell: ({ row }) => {
+        const color = row.original.color
+
+        const colorNames = {
+          '#60A5FA': 'Blue',
+          '#3B82F6': 'Primary Blue',
+          '#EF4444': 'Red',
+          '#10B981': 'Green',
+          '#DC2626': 'Dark Red',
+          '#6B7280': 'Gray'
+        }
+
+        return (
+          <div className='flex items-center gap-2'>
+            <span
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 4,
+                backgroundColor: color,
+                border: '1px solid #d1d5db',
+                display: 'inline-block',
+                flexShrink: 0
+              }}
+            />
+            <Typography variant='body2' color='text.primary'>
+              {colorNames[color?.toUpperCase()] || 'Custom Color'}
+            </Typography>
+            <Typography variant='caption' color='text.secondary'>
+              {color}
+            </Typography>
+          </div>
+        )
+      }
     }),
     columnHelper.accessor('action', {
       header: 'Actions',
@@ -225,7 +261,7 @@ const AmenityTable = ({ tableData, fetchZoneData }) => {
               setSelectedZone()
               setSelectedRegion()
             }}>
-            Add Amenity Type
+            Add Lead Status
           </Button>
           {/* <CustomTextField
             select
@@ -300,7 +336,7 @@ const AmenityTable = ({ tableData, fetchZoneData }) => {
 
       {/* Role Dialog */}
       {openDialog && (
-        <AmenityTypeDialog
+        <LeadStatusDialog
           open={openDialog}
           setOpen={setOpenDialog}
           selectedZone={selectedZone}

@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Alert,
-    Autocomplete,
     Avatar,
     Box,
     Button,
@@ -11,7 +10,6 @@ import {
     FormControl,
     FormControlLabel,
     IconButton,
-    InputAdornment,
     MenuItem,
     Paper,
     Radio,
@@ -27,8 +25,10 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
-import SearchIcon from '@mui/icons-material/Search';
 import { useApi } from '@/utils/api';
+
+import { getCountries, getCountryCallingCode } from 'libphonenumber-js'
+import * as Flags from 'country-flag-icons/react/3x2'
 
 /* ------------------------------------------------------------------ */
 /* Theme tokens                                                        */
@@ -46,18 +46,43 @@ const CONTACT_TYPES = [
     { label: 'Individual', value: 'INDIVIDUAL' },
     { label: 'Company', value: 'COMPANY' },
 ];
-const COUNTRY_CODES = [
-    { code: '+91', flag: '🇮🇳', name: 'India' },
-    { code: '+1', flag: '🇺🇸', name: 'USA' },
-    { code: '+44', flag: '🇬🇧', name: 'UK' },
-    { code: '+971', flag: '🇦🇪', name: 'UAE' },
-    { code: '+61', flag: '🇦🇺', name: 'Australia' },
-];
 const KYC_TYPES = ['Aadhaar', 'PAN', 'Passport', 'Driving License', 'Voter ID', 'GST'];
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024; // 10MB
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const WEBSITE_RE = /^https?:\/\/.+\..+/i;
+
+const regionNames = new Intl.DisplayNames(['en'], {
+    type: 'region',
+})
+
+const COUNTRY_CODES = getCountries()
+    .map(iso => ({
+        iso,
+        name: regionNames.of(iso) || iso,
+        code: `+${getCountryCallingCode(iso)}`,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+const Flag = ({ iso, ...props }) => {
+    const FlagComponent = Flags[iso]
+
+    if (!FlagComponent) return null
+
+    return (
+        <FlagComponent
+            title={iso}
+            style={{
+                width: 22,
+                height: 15,
+                borderRadius: 2,
+                flexShrink: 0,
+                display: 'block',
+            }}
+            {...props}
+        />
+    )
+}
 
 /* ------------------------------------------------------------------ */
 /* Small helpers                                                       */
@@ -617,7 +642,16 @@ const ContactCreatePage = ({ id, lang }) => {
                                 <Typography sx={labelSx}>Mobile Number</Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                     {phones.map((phone, index) => (
-                                        <Box key={index} sx={{ display: 'flex', gap: 0.5 }}>
+                                        <Box
+                                            key={index}
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 0.5,
+                                                width: '100%',
+                                                minWidth: 0,
+                                            }}
+                                        >
                                             <Box
                                                 sx={{
                                                     display: 'flex',
@@ -630,44 +664,109 @@ const ContactCreatePage = ({ id, lang }) => {
                                                     borderRadius: '8px',
                                                     overflow: 'hidden',
                                                     backgroundColor: '#fff',
+                                                    '&:focus-within': {
+                                                        borderColor: '#1976d2',
+                                                    },
                                                 }}
                                             >
                                                 <Select
                                                     variant="standard"
                                                     disableUnderline
                                                     value={phone.countryCode}
-                                                    onChange={(e) =>
-                                                        updatePhone(index, { countryCode: e.target.value })
+                                                    onChange={e =>
+                                                        updatePhone(index, {
+                                                            countryCode: e.target.value,
+                                                        })
                                                     }
                                                     IconComponent={KeyboardArrowDownIcon}
-                                                    renderValue={(value) =>
-                                                        COUNTRY_CODES.find((c) => c.code === value)?.flag ??
-                                                        value
-                                                    }
-                                                    sx={{ width: 58, fontSize: 15, pl: 1 }}
+                                                    renderValue={value => {
+                                                        const country = COUNTRY_CODES.find(c => c.code === value)
+
+                                                        return country ? (
+                                                            <Box
+                                                                sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: 0.5,
+                                                                }}
+                                                            >
+                                                                <Flag iso={country.iso} />
+                                                                <Box component="span" sx={{ fontSize: 12 }}>
+                                                                    {country.code}
+                                                                </Box>
+                                                            </Box>
+                                                        ) : (
+                                                            value
+                                                        )
+                                                    }}
+                                                    MenuProps={{
+                                                        PaperProps: {
+                                                            sx: {
+                                                                maxHeight: 300,
+                                                                minWidth: 260,
+                                                            },
+                                                        },
+                                                    }}
+                                                    sx={{
+                                                        width: 105,
+                                                        flexShrink: 0,
+                                                        fontSize: 12,
+                                                        pl: 1,
+                                                        '& .MuiSelect-select': {
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            minHeight: '42px',
+                                                            boxSizing: 'border-box',
+                                                            py: 0,
+                                                            pr: '24px !important',
+                                                        },
+                                                    }}
                                                 >
-                                                    {COUNTRY_CODES.map((c) => (
+                                                    {COUNTRY_CODES.map(country => (
                                                         <MenuItem
-                                                            key={c.code}
-                                                            value={c.code}
-                                                            sx={{ fontSize: 13 }}
+                                                            key={`${country.iso}-${country.code}`}
+                                                            value={country.code}
+                                                            sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: 1,
+                                                                fontSize: 13,
+                                                            }}
                                                         >
-                                                            {c.flag}&nbsp;{c.name} ({c.code})
+                                                            <Flag iso={country.iso} />
+                                                            <Box
+                                                                component="span"
+                                                                sx={{ flex: 1 }}
+                                                            >
+                                                                {country.name}
+                                                            </Box>
+                                                            <Box
+                                                                component="span"
+                                                                sx={{
+                                                                    color: 'text.secondary',
+                                                                    fontSize: 12,
+                                                                }}
+                                                            >
+                                                                {country.code}
+                                                            </Box>
                                                         </MenuItem>
                                                     ))}
                                                 </Select>
+
                                                 <input
                                                     type="tel"
                                                     inputMode="numeric"
                                                     placeholder="Enter mobile number"
                                                     value={phone.number}
-                                                    onChange={(e) =>
+                                                    onChange={e =>
                                                         updatePhone(index, {
                                                             number: e.target.value.replace(/\D/g, ''),
                                                         })
                                                     }
                                                     style={{
                                                         flex: 1,
+                                                        width: 0,
                                                         minWidth: 0,
                                                         border: 'none',
                                                         outline: 'none',
@@ -677,13 +776,17 @@ const ContactCreatePage = ({ id, lang }) => {
                                                     }}
                                                 />
                                             </Box>
+
                                             {phones.length > 1 && (
                                                 <IconButton
                                                     size="small"
                                                     aria-label="Remove phone"
                                                     onClick={() =>
-                                                        setPhones((prev) => prev.filter((_, i) => i !== index))
+                                                        setPhones(prev =>
+                                                            prev.filter((_, i) => i !== index)
+                                                        )
                                                     }
+                                                    sx={{ flexShrink: 0 }}
                                                 >
                                                     <CloseIcon sx={{ fontSize: 16 }} />
                                                 </IconButton>

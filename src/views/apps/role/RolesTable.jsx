@@ -178,7 +178,7 @@ const RolesTable = ({ tableData, fetchRoleData }) => {
         return (
           permissions && permissions?.['hasRoleEditPermission'] && (
             <div className='flex items-center'>
-              {row.original.created_by != '6811ae35704460d978b84eaa' && permissions['hasRoleEditPermission'] && (
+              {row.original.created_by != '6ac87727ca7c0ad2edab51f9' && permissions['hasRoleEditPermission'] && (
                 <IconButton
                   onClick={() => {
                     setSelectedRole(row.original)

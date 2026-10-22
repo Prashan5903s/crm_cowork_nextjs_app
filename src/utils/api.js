@@ -2,34 +2,34 @@ import { useSession } from 'next-auth/react';
 import { toast } from 'react-toastify'
 
 export const useApi = () => {
+    
     const { data: session } = useSession();
     const token = session?.user?.token;
 
-    const doGet = async (endpoint, params = {}) => {
+    const doGet = async (endpoint, params = {}, options = {}) => {
+
         const url = `${process.env.NEXT_PUBLIC_API_URL}/${endpoint}`;
         const query = new URLSearchParams(params).toString();
         const finalUrl = query ? `${url}?${query}` : url;
 
-        try {
-            const response = await fetch(finalUrl, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token && { Authorization: `Bearer ${token}` }),
-                },
-            });
+        const response = await fetch(finalUrl, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && {
+                    Authorization: `Bearer ${token}`,
+                }),
+            },
+            signal: options.signal,
+        });
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data?.message || 'Something went wrong');
-            }
-
-            return data?.data;
-        } catch (error) {
-            console.error('GET Request Error:', error.message);
-            throw error;
+        if (!response.ok) {
+            throw new Error(data?.message || "Something went wrong");
         }
+
+        return data?.data;
     };
 
     const doPost = async (endpoint, body = {}) => {

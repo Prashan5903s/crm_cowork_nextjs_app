@@ -11,21 +11,22 @@ import {
     DialogActions,
     Button,
     CircularProgress,
+    MenuItem,
+    TextField
 } from '@mui/material'
 
 import Grid from '@mui/material/Grid2';
 
 // Hook Form + Validation
-import { useForm, useFieldArray, Controller } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { valibotResolver } from '@hookform/resolvers/valibot'
+
 import {
     object,
     string,
-    array,
     pipe,
     minLength,
     maxLength,
-    regex
 } from 'valibot'
 
 // Components
@@ -37,8 +38,25 @@ import { toast } from 'react-toastify'
 import CustomTextField from '@core/components/mui/TextField'
 import DialogCloseButton from '../DialogCloseButton'
 
+const colorOptions = [
+    { label: 'Blue', value: '#60A5FA' },
+    { label: 'Primary Blue', value: '#3B82F6' },
+    { label: 'Red', value: '#EF4444' },
+    { label: 'Green', value: '#10B981' },
+    { label: 'Dark Red', value: '#DC2626' },
+    { label: 'Gray', value: '#6B7280' }
+]
+
 const schema = object({
-    name: pipe(string(), minLength(1, 'Amenity type name is required'), maxLength(50, 'Amenity type name max length is 50'))
+    name: pipe(
+        string(),
+        minLength(1, 'Lead status name is required'),
+        maxLength(50, 'Lead status name max length is 50')
+    ),
+    color: pipe(
+        string(),
+        minLength(1, 'Color is required')
+    )
 })
 
 const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZone, typeForm, tableData }) => {
@@ -56,7 +74,8 @@ const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
     } = useForm({
         resolver: valibotResolver(schema),
         defaultValues: {
-            name: ''
+            name: '',
+            color: ''
         }
     })
 
@@ -64,10 +83,17 @@ const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
 
     useEffect(() => {
         if (open && selectedZone) {
-
-            reset({ name: selectedZone.name })
+            reset({
+                name: selectedZone.name || '',
+                color: selectedZone.color || ''
+            })
+        } else if (open && !selectedZone) {
+            reset({
+                name: '',
+                color: ''
+            })
         }
-    }, [open, selectedZone])
+    }, [open, selectedZone, reset])
 
     const handleClose = () => {
         reset()
@@ -120,8 +146,8 @@ const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
 
         try {
             const url = selectedZone
-                ? `${API_URL}/company/amenity-type/${selectedZone._id}`
-                : `${API_URL}/company/amenity-type`
+                ? `${API_URL}/company/lead-status/${selectedZone._id}`
+                : `${API_URL}/company/lead-status`
 
             const method = selectedZone ? 'PUT' : 'POST'
 
@@ -138,7 +164,7 @@ const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
 
             if (response.ok) {
                 fetchZoneData?.()
-                toast.success(`Amenity type ${selectedZone ? 'updated' : 'added'} successfully!`, {
+                toast.success(`Lead status ${selectedZone ? 'updated' : 'added'} successfully!`, {
                     autoClose: 700
                 })
                 handleClose()
@@ -165,7 +191,7 @@ const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
             </DialogCloseButton>
 
             <DialogTitle variant="h4" className="text-center sm:pbs-16 sm:pbe-6 sm:pli-16">
-                {selectedZone ? 'Edit Amenity Type' : 'Add Amenity Type'}
+                {selectedZone ? 'Edit Lead status' : 'Add Lead status'}
             </DialogTitle>
 
             <form onSubmit={handleSubmit(submitData)} noValidate>
@@ -178,8 +204,8 @@ const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
                                 <CustomTextField
                                     {...field}
                                     required
-                                    label="Amenity Type Name"
-                                    placeholder="Enter Amenity type name"
+                                    label="Lead status Name"
+                                    placeholder="Enter Lead status name"
                                     fullWidth
 
                                     onPaste={(e) => {
@@ -193,6 +219,50 @@ const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
                                     error={!!errors?.name}
                                     helperText={errors?.name?.message}
                                 />
+                            )}
+                        />
+                    </Grid>
+
+                    <Grid size={{ xs: 12, md: 11 }}>
+                        <Controller
+                            name="color"
+                            control={control}
+                            render={({ field }) => (
+                                <TextField
+                                    {...field}
+                                    select
+                                    required
+                                    fullWidth
+                                    label="Color"
+                                    placeholder="Select color"
+                                    error={!!errors?.color}
+                                    helperText={errors?.color?.message}
+                                >
+                                    {colorOptions.map((option) => (
+                                        <MenuItem
+                                            key={option.value}
+                                            value={option.value}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span
+                                                    style={{
+                                                        width: 18,
+                                                        height: 18,
+                                                        borderRadius: '4px',
+                                                        backgroundColor: option.value,
+                                                        border: '1px solid #d1d5db',
+                                                        display: 'inline-block',
+                                                        flexShrink: 0
+                                                    }}
+                                                />
+                                                <span>{option.label}</span>
+                                                <span className="text-gray-500 text-sm">
+                                                    {option.value}
+                                                </span>
+                                            </div>
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
                             )}
                         />
                     </Grid>

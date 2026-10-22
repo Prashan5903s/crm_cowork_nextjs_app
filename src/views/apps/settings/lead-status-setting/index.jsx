@@ -10,11 +10,11 @@ import Typography from '@mui/material/Typography'
 
 import Grid from '@mui/material/Grid2'
 
-import LeadStatusTable from './AmenityTypeTable'
+import LeadStatusTable from './LeadStatusTable'
 
 import SkeletonTableComponent from '@/components/skeleton/table/page'
 
-const AmenityTypes = () => {
+const LeadStatus = () => {
 
   const [LeadStatusData, setLeadStatusData] = useState();
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ const AmenityTypes = () => {
 
     setLoading(false)
     try {
-      const response = await fetch(`${URL}/company/amenity-type`,
+      const response = await fetch(`${URL}/company/lead-status`,
         {
           method: "GET",
           headers: {
@@ -80,4 +80,4 @@ const AmenityTypes = () => {
   )
 }
 
-export default AmenityTypes
+export default LeadStatus

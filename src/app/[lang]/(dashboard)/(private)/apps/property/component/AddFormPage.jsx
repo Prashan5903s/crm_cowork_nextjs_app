@@ -50,6 +50,10 @@ import {
 
 import { useApi } from "@/utils/api";
 
+import { getCountries, getCountryCallingCode } from 'libphonenumber-js'
+
+import * as Flags from 'country-flag-icons/react/3x2'
+
 /* -------------------------------------------------------
    Constants
 ------------------------------------------------------- */
@@ -134,7 +138,7 @@ const initialData = {
     lat: "",
     lng: "",
     owner: "",
-    dial: "+91",
+    dial: "",
     phone: "",
 };
 
@@ -144,6 +148,35 @@ const initialFiles = {
     ownership: [],
     other: [],
 };
+
+const regionNames = new Intl.DisplayNames(['en'], {
+    type: 'region',
+})
+
+const COUNTRIES = getCountries()
+    .map(iso => ({
+        iso,
+        name: regionNames.of(iso) || iso,
+        dial: `+${getCountryCallingCode(iso)}`,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+const Flag = ({ iso }) => {
+    const F = Flags[iso]
+
+    return F ? (
+        <F
+            title={iso}
+            style={{
+                width: 22,
+                height: 15,
+                borderRadius: 2,
+                flexShrink: 0,
+                display: 'block',
+            }}
+        />
+    ) : null
+}
 
 /* -------------------------------------------------------
    Reusable form components
@@ -1174,46 +1207,113 @@ const AdditionalDataTab = ({
                     Provide the property owner's contact details.
                 </Typography>
 
+
                 <Box sx={grid3}>
                     <Field label="Owner Name" required>
                         <TextInput
                             placeholder="Enter owner's full name"
                             value={data.owner}
-                            onChange={(event) => set("owner", event.target.value)}
+                            onChange={(event) => set('owner', event.target.value)}
                         />
                     </Field>
 
                     <Field
                         label="Owner Contact Info"
                         required
-                        sx={{ gridColumn: { sm: "span 2" } }}
+                        sx={{ gridColumn: { sm: 'span 2' } }}
                     >
-                        <Stack direction="row" spacing={1}>
+                        <Stack direction="row" spacing={1} alignItems="stretch">
                             <Select
                                 size="small"
                                 value={data.dial}
-                                onChange={(event) => set("dial", event.target.value)}
+                                onChange={(event) => set('dial', event.target.value)}
                                 sx={{
-                                    width: 115,
+                                    width: 120,
+                                    minWidth: 110,
                                     minHeight: 44,
                                     fontSize: 14,
                                     borderRadius: 1.5,
-                                    "& .MuiOutlinedInput-notchedOutline": {
-                                        borderColor: "divider",
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'divider',
+                                    },
+                                    '& .MuiSelect-select': {
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        py: 1.25,
+                                        px: 1.25,
+                                    },
+                                }}
+                                renderValue={(selected) => {
+                                    const country = COUNTRIES.find(
+                                        (item) => item.dial === selected
+                                    )
+
+                                    if (!country) return selected
+
+                                    return (
+                                        <Stack
+                                            direction="row"
+                                            spacing={1}
+                                            alignItems="center"
+                                        >
+                                            <Flag iso={country.iso} />
+                                            <span>{country.dial}</span>
+                                        </Stack>
+                                    )
+                                }}
+                                MenuProps={{
+                                    PaperProps: {
+                                        sx: {
+                                            maxHeight: 320,
+                                            minWidth: 260,
+                                        },
                                     },
                                 }}
                             >
-                                <MenuItem value="+91">🇮🇳 +91</MenuItem>
-                                <MenuItem value="+1">🇺🇸 +1</MenuItem>
-                                <MenuItem value="+44">🇬🇧 +44</MenuItem>
-                                <MenuItem value="+971">🇦🇪 +971</MenuItem>
+                                {COUNTRIES.map((country) => (
+                                    <MenuItem
+                                        key={country.iso}
+                                        value={country.dial}
+                                        sx={{
+                                            display: 'flex',
+                                            gap: 1.25,
+                                            fontSize: 14,
+                                        }}
+                                    >
+                                        <Flag iso={country.iso} />
+
+                                        <Box
+                                            sx={{
+                                                flex: 1,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            {country.name}
+                                        </Box>
+
+                                        <Box
+                                            component="span"
+                                            sx={{
+                                                color: 'text.secondary',
+                                                ml: 'auto',
+                                            }}
+                                        >
+                                            {country.dial}
+                                        </Box>
+                                    </MenuItem>
+                                ))}
                             </Select>
 
-                            <TextInput
-                                placeholder="Enter phone number"
-                                value={data.phone}
-                                onChange={(event) => set("phone", event.target.value)}
-                            />
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <TextInput
+                                    placeholder="Enter phone number"
+                                    value={data.phone}
+                                    onChange={(event) => set('phone', event.target.value)}
+                                />
+                            </Box>
                         </Stack>
                     </Field>
                 </Box>
@@ -1759,7 +1859,7 @@ const AddFormPage = ({ id, lang }) => {
             lng: property.lng ?? property.longitude ?? "",
 
             owner: property.owner ?? property.ownerName ?? "",
-            dial: property.dial ?? property.dialCode ?? "+91",
+            dial: property.dial ?? property.dialCode ?? "",
             phone: property.phone ?? property.ownerPhone ?? "",
         };
     };
