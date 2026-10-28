@@ -117,7 +117,7 @@ const LeadSourceDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
                 if (existsInTable) {
                     setError(`name`, {
                         type: 'manual',
-                        message: 'Zone name must be unique.'
+                        message: 'Lead Document type must be unique.'
                     });
                     hasError = true;
                 }

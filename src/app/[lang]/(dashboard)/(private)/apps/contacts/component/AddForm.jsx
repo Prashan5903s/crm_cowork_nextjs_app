@@ -24,6 +24,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import { useApi } from '@/utils/api';
 
@@ -36,6 +37,7 @@ import * as Flags from 'country-flag-icons/react/3x2'
 const BORDER = '#e4e7ec';
 const TEXT = '#344054';
 const MUTED = '#667085';
+
 const labelSx = {
     fontSize: 12,
     fontWeight: 500,
@@ -43,8 +45,8 @@ const labelSx = {
     mb: 0.5,
 };
 const CONTACT_TYPES = [
-    { label: 'Individual', value: 'INDIVIDUAL' },
-    { label: 'Company', value: 'COMPANY' },
+    { label: 'INDIVIDUAL', value: 'INDIVIDUAL' },
+    { label: 'COMPANY', value: 'COMPANY' },
 ];
 const KYC_TYPES = ['Aadhaar', 'PAN', 'Passport', 'Driving License', 'Voter ID', 'GST'];
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024; // 10MB
@@ -142,6 +144,8 @@ const emptyKyc = () => ({
 const placeholder = (text) => <span style={{ color: '#98a2b3' }}>{text}</span>;
 
 const ContactCreatePage = ({ id, lang }) => {
+
+    const listPath = `/${lang}/apps/contacts`;
 
     const router = useRouter();
     const { doGet, token, doPost } = useApi();
@@ -323,18 +327,39 @@ const ContactCreatePage = ({ id, lang }) => {
 
     const validate = () => {
         const v = {};
-        if (!form.fullName.trim()) v.fullName = 'Full name is required';
-        if (emails.some((e) => e.trim() && !EMAIL_RE.test(e.trim()))) {
+
+        if (!form.fullName.trim()) {
+            v.fullName = 'Full name is required';
+        }
+
+        // Validate every email field
+        if (emails.some((email) => !email.trim())) {
+            v.emails = 'Email is required for every field';
+        } else if (emails.some((email) => !EMAIL_RE.test(email.trim()))) {
             v.emails = 'Enter a valid email address';
         }
-        if (phones.some((p) => p.number.trim() && !/^\d{6,15}$/.test(p.number.trim()))) {
+
+        // Validate every phone field
+        if (phones.some((phone) => !phone.number.trim())) {
+            v.phones = 'Mobile number is required for every field';
+        } else if (
+            phones.some((phone) => !/^\d{6,15}$/.test(phone.number.trim()))
+        ) {
             v.phones = 'Enter a valid mobile number';
         }
-        if (form.website.trim() && !WEBSITE_RE.test(form.website.trim())) {
+
+        if (
+            form.website.trim() &&
+            !WEBSITE_RE.test(form.website.trim())
+        ) {
             v.website = 'Start with http:// or https://';
         }
 
-        if (kycDocs.some((d) => (d.number.trim() || d.file || d.existingFile) && !d.type)) {
+        if (
+            kycDocs.some(
+                (d) => (d.number.trim() || d.file || d.existingFile) && !d.type
+            )
+        ) {
             v.kyc = 'Select a document type for each KYC entry';
         }
 
@@ -430,11 +455,63 @@ const ContactCreatePage = ({ id, lang }) => {
 
     const categories = Array.isArray(data?.contactCategory) ? data.contactCategory : [];
 
+    const addEmail = () => {
+        if (emails.some((email) => !email.trim())) {
+            setErrors((prev) => ({
+                ...prev,
+                emails: 'Please fill in every email field before adding another',
+            }));
+            return;
+        }
+
+        setEmails((prev) => [...prev, '']);
+        setErrors((prev) => ({ ...prev, emails: undefined }));
+    };
+
+    const addPhone = () => {
+        if (phones.some((phone) => !phone.number.trim())) {
+            setErrors((prev) => ({
+                ...prev,
+                phones: 'Please fill in every phone field before adding another',
+            }));
+            return;
+        }
+
+        setPhones((prev) => [
+            ...prev,
+            { countryCode: '+91', number: '' },
+        ]);
+        setErrors((prev) => ({ ...prev, phones: undefined }));
+    };
+
     /* ----------------------------------- UI ----------------------------------- */
     return (
         <Box sx={{ width: '100%' }}>
             {/* Title bar */}
-            <Box sx={{ mb: 2 }}>
+            <Box
+                sx={{
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                }}
+            >
+                <IconButton
+                    aria-label="Back to vendors"
+                    onClick={() => router.push(listPath)}
+                    sx={{
+                        width: 40,
+                        height: 40,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                        color: 'text.primary',
+                        '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                >
+                    <ArrowBackIcon fontSize="small" />
+                </IconButton>
+
                 <Typography sx={{ fontSize: 20, fontWeight: 700 }}>
                     {id ? 'Update Contact' : 'Create New Contact'}
                 </Typography>
@@ -585,7 +662,10 @@ const ContactCreatePage = ({ id, lang }) => {
 
                         {/* Full name */}
                         <Box>
-                            <Field label="Full Name" required>
+                            <Field
+                                label="Full Name"
+                                required
+                            >
                                 <TextField
                                     fullWidth
                                     placeholder="Enter full name"
@@ -601,12 +681,13 @@ const ContactCreatePage = ({ id, lang }) => {
                         <Box sx={twoCol}>
                             {/* Emails */}
                             <Box sx={{ minWidth: 0 }}>
-                                <Typography sx={labelSx}>Email</Typography>
+                                <Typography sx={labelSx}>Email <span style={{ color: '#d92d20' }}>*</span></Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                     {emails.map((email, index) => (
                                         <Box key={index} sx={{ display: 'flex', gap: 0.5 }}>
                                             <TextField
                                                 fullWidth
+                                                required
                                                 type="email"
                                                 placeholder="name@example.com"
                                                 value={email}
@@ -629,7 +710,7 @@ const ContactCreatePage = ({ id, lang }) => {
                                     ))}
                                 </Box>
                                 <Button
-                                    onClick={() => setEmails((prev) => [...prev, ''])}
+                                    onClick={addEmail}
                                     startIcon={<AddIcon sx={{ fontSize: 14 }} />}
                                     sx={{ mt: 0.75 }}
                                 >
@@ -639,7 +720,9 @@ const ContactCreatePage = ({ id, lang }) => {
 
                             {/* Phones */}
                             <Box sx={{ minWidth: 0 }}>
-                                <Typography sx={labelSx}>Mobile Number</Typography>
+                                <Typography sx={labelSx}>
+                                    Mobile Number <span style={{ color: '#d92d20' }}>*</span>
+                                </Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                     {phones.map((phone, index) => (
                                         <Box
@@ -800,9 +883,7 @@ const ContactCreatePage = ({ id, lang }) => {
                                     </Typography>
                                 )}
                                 <Button
-                                    onClick={() =>
-                                        setPhones((prev) => [...prev, { countryCode: '+91', number: '' }])
-                                    }
+                                    onClick={addPhone}
                                     startIcon={<AddIcon sx={{ fontSize: 14 }} />}
                                     sx={{ mt: 0.75 }}
                                 >
@@ -845,7 +926,7 @@ const ContactCreatePage = ({ id, lang }) => {
                                         alignItems: 'center',
                                     }}
                                 >
-                                    <FormControl fullWidth>
+                                    <FormControl fullWidth required>
                                         <Select
                                             displayEmpty
                                             value={doc.type}
@@ -862,6 +943,7 @@ const ContactCreatePage = ({ id, lang }) => {
                                     </FormControl>
                                     <TextField
                                         fullWidth
+                                        required
                                         placeholder="Document number"
                                         value={doc.number}
                                         onChange={(e) => updateKyc(doc.id, { number: e.target.value })}

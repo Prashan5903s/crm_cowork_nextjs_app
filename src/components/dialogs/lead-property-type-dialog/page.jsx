@@ -117,7 +117,7 @@ const LeadPropertyTypeDialog = ({ open, setOpen, title = '', fetchZoneData, sele
                 if (existsInTable) {
                     setError(`name`, {
                         type: 'manual',
-                        message: 'Zone name must be unique.'
+                        message: 'Lead property name must be unique.'
                     });
                     hasError = true;
                 }

@@ -318,28 +318,21 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               Leads
             </MenuItem>
           )}
-          {permissArray?.isCompany && permissArray?.hasEventPermission && (
-            <MenuItem key='Events' href={`/${locale}/apps/event`} sx={{ display: 'flex', alignItems: 'center' }}>
-              <i className='tabler-calendar-event' style={{ marginRight: 8, fontSize: '1.2rem' }} />
-              Events
+          {permissArray?.isCompany && (
+            <MenuItem
+              key='contracts'
+              href={`/${locale}/apps/contract`}
+              icon={<i className='tabler-file-text' />}
+            >
+              Contracts
             </MenuItem>
           )}
           {permissArray?.isCompany && (
-            <MenuItem key='Tenants' href={`/${locale}/apps/tenant/list`} sx={{ display: 'flex', alignItems: 'center' }}>
-              <i className='tabler-users' style={{ marginRight: 8, fontSize: '1.2rem' }} />
-              Tenant
-            </MenuItem>
-          )}
-          {permissArray?.isCompany && (
-            <MenuItem key='escalation_table' href={`/${locale}/apps/escalation`} sx={{ display: 'flex', alignItems: 'center' }}>
-              <i className='tabler-arrow-up-right' style={{ marginRight: 8, fontSize: '1.2rem' }} />
-              Escalated Complain
-            </MenuItem>
-          )}
-          {permissArray?.isCompany && permissArray?.hasComplainPermission && (
-            <MenuItem key='Complain' href={`/${locale}/apps/complain`}>
-              <i className='tabler-report' style={{ marginRight: 8, fontSize: '1.2rem' }} />
-              Complains
+            <MenuItem
+              href={`/${locale}/apps/invoices`}
+              icon={<i className='tabler-file-invoice' />}
+            >
+              Invoices
             </MenuItem>
           )}
           {permissArray?.isCompany && (
@@ -351,15 +344,11 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             </SubMenu>
           )}
           {permissArray?.isCompany && (
-            <MenuItem href={`/${locale}/apps/alert`} icon={<i className='tabler-notification' />}>
-              Push Notification
-            </MenuItem>
-          )}
-          {permissArray?.isCompany && (
             <SubMenu label={'Settings'} icon={<i className='tabler-settings' />}>
               <MenuItem href={`/${locale}/apps/settings/asset-category-setting`}>{'Asset Category'}</MenuItem>
               <MenuItem href={`/${locale}/apps/settings/amenity-type-setting`}>{'Amenity Types'}</MenuItem>
               <MenuItem href={`/${locale}/apps/settings/contact-category-setting`}>{'Contact Category'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/settings/contract-document-type-setting`}>{'Contract Document Type'}</MenuItem>
               <MenuItem href={`/${locale}/apps/settings/vendor-category-setting`}>{'Vendor Category'}</MenuItem>
 
               <SubMenu label={'Lead'}>

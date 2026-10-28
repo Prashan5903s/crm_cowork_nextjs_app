@@ -128,7 +128,7 @@ const LeadPurposeDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZ
                 if (existsInTable) {
                     setError(`name`, {
                         type: 'manual',
-                        message: 'Zone name must be unique.'
+                        message: 'Lead purpose name must be unique.'
                     });
                     hasError = true;
                 }

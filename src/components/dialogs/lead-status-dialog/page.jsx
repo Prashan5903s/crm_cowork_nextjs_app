@@ -47,6 +47,15 @@ const colorOptions = [
     { label: 'Gray', value: '#6B7280' }
 ]
 
+const statusOptions = [
+    { label: 'Open', value: 'Open' },
+    { label: 'Contacted', value: 'Contacted' },
+    { label: 'Qualified', value: 'Qualified' },
+    { label: 'Unqualified', value: 'Unqualified' },
+    { label: 'Lost', value: 'Lost' },
+    { label: 'Converted', value: 'Converted' }
+]
+
 const schema = object({
     name: pipe(
         string(),
@@ -133,7 +142,7 @@ const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
                 if (existsInTable) {
                     setError(`name`, {
                         type: 'manual',
-                        message: 'Zone name must be unique.'
+                        message: 'Lead status name must be unique.'
                     });
                     hasError = true;
                 }
@@ -196,29 +205,32 @@ const LeadStatusDialog = ({ open, setOpen, title = '', fetchZoneData, selectedZo
 
             <form onSubmit={handleSubmit(submitData)} noValidate>
                 <DialogContent className="overflow-visible flex flex-col gap-6 sm:pli-16">
-                    <Grid item size={{ xs: 12, md: 11 }} >
+                    <Grid size={{ xs: 12, md: 11 }}>
                         <Controller
-                            name={`name`}
+                            name="name"
                             control={control}
                             render={({ field }) => (
-                                <CustomTextField
+                                <TextField
                                     {...field}
+                                    select
                                     required
-                                    label="Lead status Name"
-                                    placeholder="Enter Lead status name"
                                     fullWidth
-
-                                    onPaste={(e) => {
-                                        const paste = e.clipboardData.getData('text');
-
-                                        // Allow paste if it only contains letters and spaces
-                                        if (!/^[a-zA-Z ]+$/.test(paste)) {
-                                            e.preventDefault();
-                                        }
-                                    }}
+                                    label="Name"
+                                    placeholder="Select Name"
                                     error={!!errors?.name}
                                     helperText={errors?.name?.message}
-                                />
+                                >
+                                    {statusOptions?.map((option) => (
+                                        <MenuItem
+                                            key={option.value}
+                                            value={option.value}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span>{option.label}</span>
+                                            </div>
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
                             )}
                         />
                     </Grid>

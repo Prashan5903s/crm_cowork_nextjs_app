@@ -335,7 +335,7 @@ const AssetCreatePage = ({ id, lang }) => {
             >
                 <IconButton
                     size="small"
-                    onClick={() => router.replace(`/ ${lang} /apps/asset - management`)}
+                    onClick={() => router.replace(`/${lang}/apps/asset-management`)}
                     aria-label="Go back"
                     sx={{
                         color: '#475467',
@@ -820,7 +820,7 @@ const AssetCreatePage = ({ id, lang }) => {
                     </Button>
                     <Button
                         variant="outlined"
-                        onClick={() => router.replace(`/ ${lang} /apps/asset - management`)}
+                        onClick={() => router.replace(`/${lang}/apps/asset-management`)}
                         size="large"
                         sx={{
                             minHeight: 46,

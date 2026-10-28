@@ -11,6 +11,8 @@ import SkeletonTableComponent from '@/components/skeleton/table/page'
 
 import LeadTable from "./LeadTable"
 
+import { useApi } from '@/utils/api'
+
 const Lead = () => {
 
     const [leadsData, setLeadsData] = useState([]);
@@ -18,15 +20,14 @@ const Lead = () => {
     const [isTable, setIsTable] = useState(true);
     const [selectLeadStatusId, setSelectLeadStatusId] = useState()
 
-    const URL = process.env.NEXT_PUBLIC_API_URL;
-
-    const { data: session } = useSession() || {};
-
-    const token = session && session.user && session?.user?.token;
+    const { doGet, token } = useApi()
 
     async function fetchLeadsData() {
         try {
-            
+
+            const response = await doGet(`company/leads/data/${view}`)
+            const result = response.data ?? response;
+            setLeadsData(result)
 
         } catch (error) {
             throw new Error(error);
@@ -34,7 +35,7 @@ const Lead = () => {
     }
 
     useEffect(() => {
-        if (URL && token && view) {
+        if (token && view) {
             fetchLeadsData();
         }
     }, [token, view])

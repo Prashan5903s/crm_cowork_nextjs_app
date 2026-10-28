@@ -40,15 +40,22 @@ import { useApi } from '@/utils/api'
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js'
 
 import * as Flags from 'country-flag-icons/react/3x2'
+import { required } from 'valibot'
 
 const OPEN_STATUS_TITLE = 'open'
 
 const EMAIL_RULE = {
+    required: 'Email is required',
     pattern: {
-        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-        message: 'Enter a valid email',
+        value: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
+        message: 'Enter a valid email address',
+    },
+    maxLength: {
+        value: 254,
+        message: 'Email must not exceed 254 characters',
     },
 }
+
 const AMOUNT_RULE = { pattern: { value: /^\d+(\.\d{1,2})?$/, message: 'Enter a valid number' } }
 
 const regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
@@ -65,7 +72,7 @@ const Flag = ({ iso }) => {
 
 const leadFormDefaults = (prefill = {}, statusId = '', assignee = '') => ({
     contact: {
-        contact_type: 'individual', category_id: '', reference_number: '', name: prefill.name || '', nationality: '',
+        contact_type: 'INDIVIDUAL', category_id: '', reference_number: '', name: prefill.name || '', nationality: '',
         emails: [{ value: prefill.email || '' }], phones: [{ country_code: '+91', number: prefill.phone || '' }],
         address: '',
         country_id: '',
@@ -304,7 +311,8 @@ const ExistingContactCard = ({ contact }) => {
 
     const rows = [
         ['Contact type', contact.contact_type], ['Name', contact.name],
-        ['Email', contact.emails?.[0]], ['Mobile number', contact.phones?.[0] && `${contact.phones[0].country_code} ${contact.phones[0].number}`],
+        ['Email', contact.emails?.[0] ?? contact?.email],
+        ['Mobile number', contact.phones?.[0] ? `${contact.phones[0].country_code} ${contact.phones[0].number}` : `${contact?.country_code} ${contact?.phone}`],
         ['Nationality', contact.nationality], ['State', contact.state_name], ['City', contact.city_name], ['Website', contact.website]
     ]
 
@@ -324,7 +332,7 @@ const ExistingContactCard = ({ contact }) => {
                     ))}
                 </Grid>
             ) : contact.kyc?.length ? (
-                contact.kyc.map((d, i) => <Typography key={i}>{d.doc_type}: {d.doc_number}</Typography>)
+                contact.kyc.map((d, i) => <Typography key={i}> {d?.document_type?.name ?? ""}: {d.number}</Typography>)
             ) : (
                 <Typography color="text.secondary">No KYC documents yet</Typography>
             )}
@@ -371,8 +379,8 @@ const ContactFields = ({ control, watch, setValue, createData }) => {
                         control={control}
                         render={({ field }) => (
                             <RadioGroup row {...field}>
-                                <FormControlLabel value="individual" control={<Radio size="small" />} label="Individual" />
-                                <FormControlLabel value="company" control={<Radio size="small" />} label="Company" />
+                                <FormControlLabel value="INDIVIDUAL" control={<Radio size="small" />} label="Individual" />
+                                <FormControlLabel value="COMPANY" control={<Radio size="small" />} label="Company" />
                             </RadioGroup>
                         )}
                     />
@@ -413,7 +421,7 @@ const ContactFields = ({ control, watch, setValue, createData }) => {
                         <Grid size={{ xs: 12, sm: 6 }}>
                             {emails.fields.map((f, i) => (
                                 <Box key={f.id} sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                                    <Field control={control} name={`contact.emails.${i}.value`} label="Email" placeholder="name@example.com" rules={EMAIL_RULE} />
+                                    <Field control={control} name={`contact.emails.${i}.value`} required label="Email" placeholder="name@example.com" rules={EMAIL_RULE} />
                                     {i > 0 && <IconButton onClick={() => emails.remove(i)} aria-label="Remove email"><i className="tabler-trash" /></IconButton>}
                                 </Box>
                             ))}
@@ -524,15 +532,39 @@ const ContactFields = ({ control, watch, setValue, createData }) => {
                                         )}
                                     />
 
-
-                                    <Controller name={`contact.phones.${i}.number`} control={control}
-                                        rules={{ pattern: { value: /^(\d{7,15})?$/, message: 'Enter 7–15 digits' } }}
+                                    <Controller
+                                        name={`contact.phones.${i}.number`}
+                                        control={control}
+                                        rules={{
+                                            required: 'Phone number is required',
+                                            pattern: {
+                                                value: /^\d{7,15}$/,
+                                                message: 'Enter a valid phone number (7–15 digits)',
+                                            },
+                                        }}
                                         render={({ field, fieldState }) => (
-                                            <TextField {...field} size="small" fullWidth label="Mobile number"
-                                                onChange={e => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 15))}
-                                                slotProps={{ htmlInput: { inputMode: 'numeric' } }}
-                                                error={!!fieldState.error} helperText={fieldState.error?.message} />
-                                        )} />
+                                            <TextField
+                                                {...field}
+                                                size="small"
+                                                fullWidth
+                                                label="Mobile number"
+                                                required
+                                                onChange={e =>
+                                                    field.onChange(
+                                                        e.target.value.replace(/\D/g, '').slice(0, 15)
+                                                    )
+                                                }
+                                                slotProps={{
+                                                    htmlInput: {
+                                                        inputMode: 'numeric',
+                                                        maxLength: 15,
+                                                    },
+                                                }}
+                                                error={!!fieldState.error}
+                                                helperText={fieldState.error?.message}
+                                            />
+                                        )}
+                                    />
                                     {i > 0 && <IconButton onClick={() => phones.remove(i)} aria-label="Remove phone"><i className="tabler-trash" /></IconButton>}
                                 </Box>
                             ))}
@@ -549,6 +581,7 @@ const ContactFields = ({ control, watch, setValue, createData }) => {
                         <Grid size={{ xs: 12, sm: 5 }}>
                             <Field
                                 control={control}
+                                required
                                 name={`contact.kyc.${i}.doc_type`}
                                 label="Document type"
                                 rules={{ required: 'Select a document type' }}
@@ -559,7 +592,7 @@ const ContactFields = ({ control, watch, setValue, createData }) => {
                             />
                         </Grid>
                         <Grid size={{ xs: 10, sm: 6 }}>
-                            <Field control={control} name={`contact.kyc.${i}.doc_number`} label="Document number" rules={{ required: 'Enter the document number' }} />
+                            <Field control={control} required name={`contact.kyc.${i}.doc_number`} label="Document number" rules={{ required: 'Enter the document number' }} />
                         </Grid>
                         <Grid size={{ xs: 2, sm: 1 }}>
                             <IconButton onClick={() => kyc.remove(i)} aria-label="Remove document"><i className="tabler-trash" /></IconButton>
@@ -645,7 +678,20 @@ const ContactFields = ({ control, watch, setValue, createData }) => {
 const LeadFields = ({ control, createData }) => {
     const d = createData || {}
     const sel = (name, label, options) => (
-        <Grid size={{ xs: 12, sm: 6 }}><Field control={control} name={`lead.${name}`} label={label} options={options || []} /></Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+            <Field
+                required={label == "Status" || label == "Department"}
+                rules={
+                    (label === "Status" || label == "Department")
+                        ? (label == "Department" ? { required: "Department is required" } : { required: "Lead status is required" })
+                        : {}
+                }
+                control={control}
+                name={`lead.${name}`}
+                label={label}
+                options={options || []}
+            />
+        </Grid>
     )
 
     return (
@@ -691,7 +737,19 @@ const LeadFields = ({ control, createData }) => {
     )
 }
 
-const LeadForm = ({ existing, prefill, createData, token, onClose, onCreated, doPost }) => {
+const LeadForm = ({
+    editLead,
+    existing,
+    prefill,
+    createData,
+    token,
+    onClose,
+    onCreated,
+    doPost
+}) => {
+
+    const isEdit = Boolean(editLead)
+
     const { data: session } = useSession()
     const [saving, setSaving] = useState(false)
 
@@ -704,7 +762,7 @@ const LeadForm = ({ existing, prefill, createData, token, onClose, onCreated, do
             prefill,
             defaultStatus,
             defaultUser
-        ),
+        )
     })
 
     const {
@@ -712,29 +770,85 @@ const LeadForm = ({ existing, prefill, createData, token, onClose, onCreated, do
         handleSubmit,
         watch,
         setValue,
-        reset,
+        reset
     } = methods
 
-
-    // defaults arrive after createData loads
     useEffect(() => {
+        if (editLead) {
+            reset({
+                ...leadFormDefaults({}, defaultStatus, defaultUser),
+                lead: {
+                    source_id: editLead.source_id || editLead.source?._id || '',
+                    status_id:
+                        editLead.status_id ||
+                        editLead.lead_status_id ||
+                        editLead.lead_status?.status?._id ||
+                        '',
+                    contact_method_id: editLead.contact_method_id || '',
+                    type_id: editLead.type_id || '',
+                    priority_id: editLead.priority_id || '',
+                    purpose_id: editLead.purpose_id || '',
+                    property_type_id: editLead.property_type_id || '',
+                    move_in_timeline_id: editLead.move_in_timeline_id || '',
+                    department_id: editLead.department_id || '',
+                    assigned_to: editLead.assigned_to || '',
+                    agent_id: editLead.agent_id || '',
+                    commission_type: editLead.commission_type || '',
+                    commission_value: editLead.commission_value ?? '',
+                    commission_amount: editLead.commission_amount ?? ''
+                }
+            })
+        } else {
+
+            reset(leadFormDefaults(prefill, defaultStatus, defaultUser))
+        }
+    }, [editLead, prefill, defaultStatus, defaultUser, reset])
+
+    useEffect(() => {
+
         if (createData && !watch('lead.status_id')) setValue('lead.status_id', defaultStatus)
-    }, [createData]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [createData])
 
     const submit = async values => {
         setSaving(true);
 
         try {
-            const payload = existing
-                ? { contact_id: existing._id, lead: values.lead }
-                : { contact: values.contact, lead: values.lead };
+            const isEditing = Boolean(editLead);
 
-            const clean = o =>
+            const payload = isEditing
+                ? {
+                    lead_id: editLead._id,
+                    contact_id:
+                        editLead.contact_id?._id ||
+                        editLead.contact_id ||
+                        editLead.contact?._id ||
+                        editLead.contact ||
+                        undefined,
+                    lead: values.lead,
+                } : existing ? {
+                    contact_id: existing._id,
+                    lead: values.lead,
+                } : {
+                    contact: values.contact,
+                    lead: values.lead,
+                };
+
+            // Remove empty strings from lead fields.
+            const clean = obj =>
                 Object.fromEntries(
-                    Object.entries(o).filter(([, x]) => x !== '')
+                    Object.entries(obj || {}).filter(
+                        ([, value]) => value !== ''
+                    )
                 );
 
             payload.lead = clean(payload.lead);
+
+            // Remove undefined fields before sending the payload.
+            Object.keys(payload).forEach(key => {
+                if (payload[key] === undefined) {
+                    delete payload[key];
+                }
+            });
 
             const body = new FormData();
             body.append('payload', JSON.stringify(payload));
@@ -745,34 +859,39 @@ const LeadForm = ({ existing, prefill, createData, token, onClose, onCreated, do
 
             await doPost('company/leads/save/data', body);
 
-            toast.success('Lead created', { autoClose: 1000 });
+            toast.success(
+                isEditing ? 'Lead updated' : 'Lead created',
+                { autoClose: 1000 }
+            );
 
             await onCreated?.();
             reset();
             onClose();
         } catch (e) {
             console.error(e);
-            toast.error(e.message || 'Could not reach the server. Try again.');
+            toast.error(
+                e.message || 'Could not reach the server. Try again.'
+            );
         } finally {
             setSaving(false);
         }
     };
 
+
     return (
         <form onSubmit={handleSubmit(submit)} noValidate>
-            {existing
-                ?
-                <ExistingContactCard
-                    contact={existing}
-                />
-                :
+            {isEdit ? (
+                <ExistingContactCard contact={editLead.contact || editLead} />
+            ) : existing ? (
+                <ExistingContactCard contact={existing} />
+            ) : (
                 <ContactFields
                     control={control}
                     watch={watch}
                     setValue={setValue}
                     createData={createData}
                 />
-            }
+            )}
             <LeadFields
                 control={control}
                 createData={createData}
@@ -793,11 +912,14 @@ export default function CreateLeadDrawer({
     open,
     onClose,
     createData,
+    onOpenLead,
     fetchLeadsData,
-    onOpenLead
+    editLead,
 }) {
 
     const { doGet, doPost, token } = useApi()
+
+    const isEdit = Boolean(editLead)
 
     // step: 'search' | 'form'; existing: contact record picked from search
     const [step, setStep] = useState('search')
@@ -805,8 +927,18 @@ export default function CreateLeadDrawer({
     const [prefill, setPrefill] = useState({})
 
     useEffect(() => {
-        if (open) { setStep('search'); setExisting(null); setPrefill({}) }
-    }, [open])
+        if (!open) return;
+
+        if (editLead) {
+            setExisting(null);
+            setPrefill({});
+            setStep("form");
+        } else {
+            setStep("search");
+            setExisting(null);
+            setPrefill({});
+        }
+    }, [open, editLead]);
 
     const startNew = term => {
         const t = term.trim()
@@ -817,14 +949,14 @@ export default function CreateLeadDrawer({
     }
 
     return (
-        <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ paper: { sx: { width: 'min(760px, 100vw)' } } }}>
+        <Drawer open={open} onClose={onClose} anchor="right" slotProps={{ paper: { sx: { width: 'min(760px, 100vw)' } } }}>
             <Box sx={{ p: 5, overflowY: 'auto' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Typography variant="h6">Create new lead</Typography>
+                    <Typography variant="h6">{isEdit ? "Edit Lead" : "Create New Lead"}</Typography>
                     <IconButton onClick={onClose} aria-label="Close"><i className="tabler-x" /></IconButton>
                 </Box>
 
-                {step === 'search' ? (
+                {!isEdit && step === "search" ? (
                     <SearchStep
                         token={token}
                         doGet={doGet}
@@ -832,11 +964,15 @@ export default function CreateLeadDrawer({
                         onCancel={onClose}
                         onCreateNew={startNew}
                         onOpenLead={r => { onClose(); onOpenLead?.(r) }}
-                        onPickContact={c => { setExisting(c); setStep('form') }}
+                        onPickContact={contact => {
+                            setExisting(contact);
+                            setStep("form");
+                        }}
                     />
                 ) : (
                     <LeadForm
-                        key={existing?._id || 'new'}
+                        key={editLead?._id || existing?._id || "new"}
+                        editLead={editLead}
                         existing={existing}
                         prefill={prefill}
                         createData={createData}
@@ -848,6 +984,6 @@ export default function CreateLeadDrawer({
                     />
                 )}
             </Box>
-        </Drawer>
+        </Drawer >
     )
 }

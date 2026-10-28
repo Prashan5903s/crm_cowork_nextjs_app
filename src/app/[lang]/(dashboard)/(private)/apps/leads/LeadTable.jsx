@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 
-import { useSession } from 'next-auth/react'
 import {
   Popover, Card, CardContent, Typography, TextField, Button, Menu, MenuItem, IconButton, Box,
   Table, TableHead, TableBody, TableRow, TableCell, TablePagination, Avatar, Chip
@@ -12,7 +11,6 @@ import * as XLSX from 'xlsx'
 
 import { usePermissionList } from '@/utils/getPermission'
 import { getInitials } from '@/utils/getInitials'
-import LeadDialog from '@components/dialogs/leads-dialog/page'
 import ProposalDialog from '@/components/dialogs/proposal-dialog/page'
 import FollowUpTableDialog from '@/components/dialogs/follow_up_table_dialog/page'
 import FollowUpDialog from '@/components/dialogs/follow-up-dialog/page'
@@ -21,96 +19,10 @@ import CreateLeadDrawer from './CreateLeadDrawer'
 import { useApi } from '@/utils/api'
 
 const PROPOSAL_STATUS_ID = '69d5dfb78c890e742280d9c9' // status that allows "Send proposal"
-const EMPTY_FILTERS = { search: '', leadStatus: '', leadSource: '', solution: '', converted: '' }
+const UNASSIGNED_ID = 'unassigned'
+const EMPTY_FILTERS = { search: '', leadStatus: '', leadSource: '', converted: '' }
 
-const sourceData = [
-  {
-    label: "Website",
-    value: "website",
-  },
-  {
-    label: "Referral",
-    value: "referral",
-  },
-  {
-    label: "Cold Outreach",
-    value: "cold_outreach",
-  },
-  {
-    label: "Social Media",
-    value: "social_media",
-  },
-  {
-    label: "Walk-in",
-    value: "walk_in",
-  },
-  {
-    label: "Advertisement",
-    value: "advertisement",
-  },
-  {
-    label: "Facebook",
-    value: "facebook",
-  },
-  {
-    label: "Tik tok",
-    value: "tik_tok",
-  },
-  {
-    label: "Google ads",
-    value: "google_ads",
-  },
-  {
-    label: "Partner",
-    value: "partner",
-  },
-  {
-    label: "Other",
-    value: "other",
-  },
-]
-
-const contactMethodData = [
-  {
-    label: "Email",
-    value: "email",
-  },
-  {
-    label: "Phone",
-    value: "phone",
-  },
-  {
-    label: "Whatsapp",
-    value: "whatsapp",
-  },
-  {
-    label: "Sms",
-    value: "sms",
-  },
-  {
-    label: "Chat",
-    value: "chat",
-  },
-]
-
-const priorityData = [
-  {
-    label: "Urgent",
-    value: "urgent",
-  },
-  {
-    label: "Low",
-    value: "low",
-  },
-  {
-    label: "Medium",
-    value: "medium",
-  },
-  {
-    label: "High",
-    value: "high"
-  }
-]
+const statusTitle = s => s?.title ?? s?.name ?? ''
 
 const formatDate = value => {
   const d = value ? new Date(value) : null
@@ -125,34 +37,27 @@ const matches = (lead, f) => {
     (!s ||
       [lead.name, lead.company_name, lead.email].some(x => x?.toLowerCase().includes(s)) ||
       lead.phone?.includes(s)) &&
-    (!f.leadStatus || lead.lead_status_id === f.leadStatus) &&
-    (!f.leadSource || lead.source_id === f.leadSource) &&
-    (!f.solution || lead.solution_id === f.solution) &&
+    (!f.leadStatus || String(lead.lead_status_id) === f.leadStatus) &&
+    (!f.leadSource || String(lead.source_id) === f.leadSource) &&
     (f.converted === '' || Boolean(lead.is_converted) === (f.converted === 'true'))
   )
 }
 
 const StatusDot = ({ color, title }) => (
   <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-    <Box
-      sx={{
-        width: 8,
-        height: 8,
-        flexShrink: 0,
-        borderRadius: '50%',
-        bgcolor: color || 'grey.400',
-      }}
-    />
+    <Box sx={{ width: 8, height: 8, flexShrink: 0, borderRadius: '50%', bgcolor: color || 'grey.400' }} />
     <span>{title}</span>
   </Box>
-);
+)
 
 /* ---------- filters popover ---------- */
 const FilterSelect = ({ label, value, onChange, options }) => (
   <Grid size={{ xs: 12, sm: 6 }}>
     <TextField select fullWidth size="small" label={label} value={value} onChange={e => onChange(e.target.value)}>
       <MenuItem value="">All</MenuItem>
-      {options.map(o => <MenuItem key={o._id ?? o.value} value={o._id ?? o.value}>{o.title}</MenuItem>)}
+      {options.map(o => (
+        <MenuItem key={o._id ?? o.value} value={o._id ?? o.value}>{o.title ?? o.name ?? o.label}</MenuItem>
+      ))}
     </TextField>
   </Grid>
 )
@@ -160,12 +65,14 @@ const FilterSelect = ({ label, value, onChange, options }) => (
 const FiltersPanel = ({ draft, setDraft, createData, onApply, onReset }) => {
   const set = k => v => setDraft(p => ({ ...p, [k]: v }))
 
+  // the create-data endpoint may expose statuses as statusData or leadStatus
+  const statusOptions = createData?.statusData || createData?.leadStatus || []
+
   return (
     <Box sx={{ p: 4, width: { xs: 300, sm: 640 } }}>
       <Grid container spacing={3}>
-        <FilterSelect label="Lead status" value={draft.leadStatus} onChange={set('leadStatus')} options={createData?.statusData || []} />
-        <FilterSelect label="Lead source" value={draft.leadSource} onChange={set('leadSource')} options={createData?.sourceData || []} />
-        <FilterSelect label="Solution" value={draft.solution} onChange={set('solution')} options={createData?.solutionData || []} />
+        <FilterSelect label="Lead status" value={draft.leadStatus} onChange={set('leadStatus')} options={statusOptions} />
+        <FilterSelect label="Lead source" value={draft.leadSource} onChange={set('leadSource')} options={createData?.leadSource || []} />
         <FilterSelect label="Converted" value={draft.converted} onChange={set('converted')}
           options={[{ value: 'true', title: 'Yes' }, { value: 'false', title: 'No' }]} />
         <Grid size={12} sx={{ display: 'flex', gap: 2 }}>
@@ -192,8 +99,8 @@ const ListView = ({ rows, actions }) => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              {['Lead', 'Phone', 'Follow up', 'Proposal', 'Avg. monthly consumption', 'Sanctioned load', 'Status', ''].map(h => (
-                <TableCell key={h}>{h}</TableCell>
+              {['Lead', 'Phone', 'Follow up', 'Proposal', 'Source', 'Status', ''].map((h, i) => (
+                <TableCell key={i}>{h}</TableCell>
               ))}
             </TableRow>
           </TableHead>
@@ -224,13 +131,12 @@ const ListView = ({ rows, actions }) => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    {lead.lead_status_id === PROPOSAL_STATUS_ID && (
+                    {String(lead?.lead_status?.status?.name) === "Converted" && (
                       <IconButton size="small" aria-label="Send proposal" onClick={() => actions.sendProposal(lead)}><i className="tabler-send" /></IconButton>
                     )}
                   </TableCell>
-                  <TableCell>{lead.average_monthly_consumption}</TableCell>
-                  <TableCell>{lead.sanctioned_load}</TableCell>
-                  <TableCell><StatusDot color={st?.color} title={st?.title || '—'} /></TableCell>
+                  <TableCell>{lead.source?.name}</TableCell>
+                  <TableCell><StatusDot color={lead?.lead_status?.status?.color} title={lead?.lead_status?.status?.name || '—'} /></TableCell>
                   <TableCell>
                     <IconButton size="small" aria-label="Edit lead" onClick={() => actions.edit(lead)}><i className="tabler-edit" /></IconButton>
                   </TableCell>
@@ -272,29 +178,41 @@ const KanbanCard = ({ lead, color, actions }) => {
       <Menu anchorEl={anchor} open={!!anchor} onClose={close}>
         <MenuItem onClick={run(actions.addFollowUp)}>Add follow up</MenuItem>
         <MenuItem onClick={run(actions.viewFollowUps)}>View follow ups</MenuItem>
-        {lead.lead_status_id === PROPOSAL_STATUS_ID && <MenuItem onClick={run(actions.sendProposal)}>Send proposal</MenuItem>}
+        {String(lead.lead_status_id) === PROPOSAL_STATUS_ID && <MenuItem onClick={run(actions.sendProposal)}>Send proposal</MenuItem>}
         <MenuItem onClick={run(actions.edit)}>Edit</MenuItem>
       </Menu>
     </Box>
   )
 }
 
-const KanbanView = ({ groups, onAdd, actions, createData }) => (
+const KanbanView = ({ groups, onAdd, actions }) => (
   <Box sx={{ display: 'flex', gap: 4, overflowX: 'auto', p: 4 }}>
-    {createData?.leadStatus?.map(ld => (
-      <Box key={ld?._id} sx={{ minWidth: 280, bgcolor: 'action.hover', borderRadius: 2, p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography component={"div"} fontWeight={600}><StatusDot color={ld?.color} title={ld?.name} /></Typography>
-          <Chip size="small" label={0} />
+    {groups.map(col => {
+      const id = col.status?._id
+      const leads = col.leads || []
+
+      return (
+        <Box key={id} sx={{ minWidth: 280, bgcolor: 'action.hover', borderRadius: 2, p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography component="div" fontWeight={600}>
+              <StatusDot color={col.status?.color} title={statusTitle(col.status)} />
+            </Typography>
+            <Chip size="small" label={leads.length} />
+          </Box>
+          <Button
+            fullWidth size="small" variant="outlined" sx={{ mb: 3 }}
+            onClick={() => onAdd(id === UNASSIGNED_ID ? undefined : id)}
+          >
+            + Add lead
+          </Button>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 420, overflowY: 'auto', pr: 1 }}>
+            {leads.length
+              ? leads.map(l => <KanbanCard key={l._id} lead={l} color={col.status?.color} actions={actions} />)
+              : <Typography variant="body2" color="text.secondary" align="center">No cards</Typography>}
+          </Box>
         </Box>
-        <Button fullWidth size="small" variant="outlined" sx={{ mb: 3 }} onClick={() => onAdd(ld?._id)}>+ Add lead</Button>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 420, overflowY: 'auto', pr: 1 }}>
-          {/* {col.leads.length
-            ? col.leads.map(l => <KanbanCard key={l._id} lead={l} color={col.status?.color} actions={actions} />)
-            : <Typography variant="body2" color="text.secondary" align="center">No cards</Typography>} */}
-        </Box>
-      </Box>
-    ))}
+      )
+    })}
   </Box>
 )
 
@@ -307,18 +225,17 @@ export default function LeadTable({
   fetchLeadsData,
   view,
   setView,
-  setLeadsData,
+  setLeadsData
 }) {
-
   const { doGet, token } = useApi()
 
   const [createData, setCreateData] = useState(null)
-  const [draft, setDraft] = useState(EMPTY_FILTERS)     // being edited
+  const [draft, setDraft] = useState(EMPTY_FILTERS) // being edited
   const [applied, setApplied] = useState(EMPTY_FILTERS) // actually applied
   const [filterAnchor, setFilterAnchor] = useState(null)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
+  const [editLead, setEditLead] = useState(null)
   const [followUpOpen, setFollowUpOpen] = useState(false)
   const [followUpListOpen, setFollowUpListOpen] = useState(false)
   const [proposalOpen, setProposalOpen] = useState(false)
@@ -334,61 +251,90 @@ export default function LeadTable({
 
   // one fetch of dropdown data, shared by filters + create drawer
   useEffect(() => {
-
     if (!token) return
 
     const loadData = async () => {
       try {
-
-        const result = await doGet("company/leads/create/data");
+        const result = await doGet('company/leads/create/data')
 
         setCreateData(result)
       } catch (error) {
-
-        throw new Error(error)
+        console.error('Error loading create data:', error)
       }
     }
 
-    loadData();
-
+    loadData()
   }, [token])
+
+  // The shape of tableData depends on the view: array of leads (table) or [{ status, leads }] (kanban).
+  const isKanbanShape = Array.isArray(tableData) && tableData.length > 0 && 'leads' in tableData[0]
+  const shapeMatchesView = !Array.isArray(tableData) || tableData.length === 0 || (view === 'kanban') === isKanbanShape
 
   // Derived, so a refetch after create/edit is never hidden behind stale filtered state
   const filtered = useMemo(() => {
-    if (!Array.isArray(tableData)) return []
+    if (!Array.isArray(tableData) || !shapeMatchesView) return []
 
     return view === 'kanban'
       ? tableData.map(g => ({ ...g, leads: (g.leads || []).filter(l => matches(l, applied)) }))
       : tableData.filter(l => matches(l, applied))
-  }, [tableData, applied, view])
+  }, [tableData, applied, view, shapeMatchesView])
 
-  const actions = useMemo(() => ({
-    addFollowUp: l => { setSelectedLead(l); setFollowUpOpen(true) },
-    viewFollowUps: l => { setSelectedLead(l); setFollowUpListOpen(true) },
-    sendProposal: l => { setSelectedLead(l); setProposalOpen(true) },
-    edit: l => { setIsTable(view === 'table'); setSelectedLead(l); setEditOpen(true) }
-  }), [view, setIsTable])
+  const actions = useMemo(
+    () => ({
+      addFollowUp: l => {
+        setSelectedLead(l);
+        setFollowUpOpen(true);
+      },
+      viewFollowUps: l => {
+        setSelectedLead(l);
+        setFollowUpListOpen(true);
+      },
+      sendProposal: l => {
+        setSelectedLead(l);
+        setProposalOpen(true);
+      },
+      edit: l => {
+        setEditLead(l);
+        setSelectedLead(l);
+        setDrawerOpen(true);
+      },
+    }),
+    []
+  );
 
   const openCreate = useCallback(statusId => {
-    setSelectLeadStatusId(statusId)
-    setDrawerOpen(true)
-  }, [setSelectLeadStatusId])
+    setEditLead(null);
+    setSelectLeadStatusId(statusId);
+    setDrawerOpen(true);
+  }, [setSelectLeadStatusId]);
 
-  const switchView = next => { setLeadsData(null); setIsTable(next === 'table'); setView(next) }
+  const switchView = next => {
+    if (next === view) return
+    setLeadsData(null)
+    setIsTable(next === 'table')
+    setView(next)
+  }
 
   const exportExcel = () => {
-    const leads = view === 'table'
-      ? filtered
-      : filtered.flatMap(g => g.leads.map(l => ({ ...l, kanban_status: g.status?.title || '' })))
+    const leads =
+      view === 'table'
+        ? filtered
+        : filtered.flatMap(g => (g.leads || []).map(l => ({ ...l, kanban_status: statusTitle(g.status) })))
 
     const rows = leads.map((l, i) => ({
-      'S.No': i + 1, Name: l.name || '', Email: l.email || '', Phone: l.phone || '', Company: l.company_name || '',
-      'Average monthly consumption': l.average_monthly_consumption ?? '', 'Sanctioned load': l.sanctioned_load ?? '',
+      'S.No': i + 1,
+      Name: l.name || '',
+      Email: l.email || '',
+      Phone: l.phone || '',
+      Company: l.company_name || '',
+      'Average monthly consumption': l.average_monthly_consumption ?? '',
+      'Sanctioned load': l.sanctioned_load ?? '',
       'No. of follow ups': l.followUp?.length || 0,
       'Latest follow up': l.followUp?.length ? formatDate(l.followUp[l.followUp.length - 1]?.follow_up_date) : '',
-      Status: view === 'kanban' ? l.kanban_status : l.lead_status?.status?.title || '',
-      Source: l.source?.title || '', Solution: l.solution?.title || '',
-      Converted: l.is_converted ? 'Yes' : 'No', 'Created at': formatDate(l.created_at)
+      Status: view === 'kanban' ? l.kanban_status : statusTitle(l.lead_status?.status),
+      Source: l.source?.title || l.source?.name || '',
+      Converted: l.is_converted ? 'Yes' : 'No',
+      'Created at': formatDate(l.created_at)
     }))
 
     const wb = XLSX.utils.book_new()
@@ -421,7 +367,8 @@ export default function LeadTable({
             <Button variant="outlined" color="success" startIcon={<i className="tabler-filter" />} onClick={e => setFilterAnchor(e.currentTarget)}>Filters</Button>
             <Popover open={!!filterAnchor} anchorEl={filterAnchor} onClose={() => setFilterAnchor(null)}>
               <FiltersPanel
-                draft={draft} setDraft={setDraft} createData={createData}
+                createData={createData}
+                draft={draft} setDraft={setDraft}
                 onApply={() => { setApplied(draft); setFilterAnchor(null) }}
                 onReset={() => { setDraft(EMPTY_FILTERS); setApplied(EMPTY_FILTERS); setFilterAnchor(null) }}
               />
@@ -437,27 +384,27 @@ export default function LeadTable({
       {!loaded ? (
         <Typography sx={{ p: 6 }} color="text.secondary" align="center">Loading leads…</Typography>
       ) : view === 'table' ? (
-        <Box sx={{ p: 4 }}><ListView createData={createData} rows={filtered} actions={actions} /></Box>
+        <Box sx={{ p: 4 }}><ListView rows={filtered} actions={actions} /></Box>
       ) : (
-        <KanbanView createData={createData} groups={filtered} onAdd={openCreate} actions={actions} />
+        <KanbanView groups={filtered} onAdd={openCreate} actions={actions} />
       )}
 
       {drawerOpen && (
-
         <CreateLeadDrawer
           open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
+          editLead={editLead}
+          onClose={() => {
+            setDrawerOpen(false);
+            setEditLead(null);
+          }}
+          onOpenLead={r => {
+            const all = view === 'kanban' ? tableData.flatMap(g => g.leads || []) : tableData
+            const lead = all.find(l => l._id === r._id)
+
+            if (lead) actions.edit(lead)
+          }}
           createData={createData}
           fetchLeadsData={fetchLeadsData}
-          onOpenLead={r => { const lead = (view === 'kanban' ? tableData.flatMap(g => g.leads) : tableData).find(l => l._id === r._id); if (lead) actions.edit(lead) }}
-        />
-      )}
-
-      {editOpen && (
-        <LeadDialog
-          open={editOpen} setOpen={setEditOpen} isTable={isTable} tableData={tableData}
-          selectedLead={selectedLead} selectLeadStatusId={selectLeadStatusId}
-          fetchLeadsData={fetchLeadsData} permissionArr={permissions}
         />
       )}
       {followUpOpen && (
