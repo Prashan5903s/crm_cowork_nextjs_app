@@ -9,6 +9,7 @@ import Link from "next/link";
 import {
     Box,
     Button,
+    Divider,
     InputAdornment,
     LinearProgress,
     MenuItem,
@@ -25,6 +26,7 @@ import {
     TableHead,
     Skeleton,
     TableRow,
+    Tooltip,
     Typography,
 } from "@mui/material";
 
@@ -47,6 +49,8 @@ import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import PaidOutlinedIcon from "@mui/icons-material/PaidOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
 import {
     calcTotals,
@@ -177,24 +181,52 @@ const Filter = ({ label, value = "", onChange, options = [] }) => {
     );
 };
 
+// View + Edit icon buttons, used on both the card and the table row.
+// Edit opens the existing create/[id] form; View opens the read-only page.
+const InvoiceActions = ({ inv, INVOICE_BASE }) => (
+    <Stack direction="row" spacing={0.5} alignItems="center">
+        <Tooltip title="View">
+            <IconButton
+                size="small"
+                component={Link}
+                href={`${INVOICE_BASE}/view/${inv._id}`}
+                aria-label="View invoice"
+                sx={{ color: "primary.main", "&:hover": { bgcolor: "#dbeafe" } }}
+            >
+                <VisibilityOutlinedIcon fontSize="small" />
+            </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Edit">
+            <IconButton
+                size="small"
+                component={Link}
+                href={`${INVOICE_BASE}/create/${inv._id}`}
+                aria-label="Edit invoice"
+                sx={{ color: "primary.main", "&:hover": { bgcolor: "#ffedd5" } }}
+            >
+                <EditOutlinedIcon fontSize="small" />
+            </IconButton>
+        </Tooltip>
+    </Stack>
+);
+
 const InvoiceCard = ({ inv, INVOICE_BASE }) => {
     const total = getTotal(inv);
     const due = dueInfo(inv);
     const percent = getPaidPercent(inv);
     const active = isActive(inv);
 
+    // The card is no longer a single <Link>: nested links/buttons inside an
+    // <a> are invalid HTML, so navigation now happens through the icons.
     return (
         <Paper
-            component={Link}
-            href={`${INVOICE_BASE}/create/${inv._id}`}
             variant="outlined"
             sx={{
                 display: "block",
                 p: 2,
                 borderRadius: 3,
                 borderColor: "#6b7280",
-                textDecoration: "none",
-                color: "inherit",
                 transition: "0.15s",
                 "&:hover": { transform: "translateY(-2px)", boxShadow: 4 },
             }}
@@ -294,6 +326,12 @@ const InvoiceCard = ({ inv, INVOICE_BASE }) => {
                     }}
                 />
             </Box>
+
+            <Divider sx={{ mt: 1.5, mb: 0.5 }} />
+
+            <Stack direction="row" justifyContent="flex-end">
+                <InvoiceActions inv={inv} INVOICE_BASE={INVOICE_BASE} />
+            </Stack>
         </Paper>
     );
 };
@@ -647,6 +685,7 @@ export default function InvoiceListComponent() {
                                 <TableCell>Due Date</TableCell>
                                 <TableCell>Status</TableCell>
                                 <TableCell align="right">Amount</TableCell>
+                                <TableCell align="center">Actions</TableCell>
                             </TableRow>
                         </TableHead>
 
@@ -672,6 +711,15 @@ export default function InvoiceListComponent() {
 
                                     <TableCell align="right" sx={{ fontWeight: 700 }}>
                                         {inr(getTotal(inv))}
+                                    </TableCell>
+
+                                    <TableCell align="center">
+                                        <Stack direction="row" justifyContent="center">
+                                            <InvoiceActions
+                                                inv={inv}
+                                                INVOICE_BASE={INVOICE_BASE}
+                                            />
+                                        </Stack>
                                     </TableCell>
                                 </TableRow>
                             ))}

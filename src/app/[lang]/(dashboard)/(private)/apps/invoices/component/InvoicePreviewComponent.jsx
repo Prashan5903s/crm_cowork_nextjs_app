@@ -1,24 +1,37 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
-    Box, Button, Divider, IconButton, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography,
+    Box,
+    Button,
+    Divider,
+    IconButton,
+    Paper,
+    Stack,
+    Skeleton,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    Typography,
 } from "@mui/material";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PrintOutlinedIcon from "@mui/icons-material/PrintOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-
-import ApprovalWorkflow from "./ApprovalWorkFlow";
 
 import { company, contacts } from "../data/page";
 
-import { amountInWords, calcLine, calcTotals, ddmmyyyy, inr } from "../util/HelperFun";
+import { amountInWords, calcLine, calcTotals, inr } from "../util/HelperFun";
+
+import { useApi } from "@/utils/api";
+
 
 const noPrint = { "@media print": { display: "none" } };
 const line = "#e5e7eb";
@@ -35,20 +48,119 @@ const th = {
     borderBottom: `1px solid ${line}`, py: 1.25, whiteSpace: "nowrap",
 };
 
-export default function InvoicePreviewComponent({ invoice }) {
+// Dates arrive as ISO strings ("2026-10-28T00:00:00.000Z"). Format as DD/MM/YYYY.
+// UTC fields are used so a date stored at midnight UTC never shifts by timezone.
+const formatDate = (value) => {
+    if (!value) return "-";
 
-    const { lang } = useParams()
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "-";
 
-    const INVOICE_BASE = `/${lang}/apps/invoices`
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
 
-    const t = calcTotals(invoice.items);
-    const contact = contacts.find((c) => c.value === invoice.billedTo);
+    return `${dd}/${mm}/${d.getUTCFullYear()}`;
+};
+
+// status is a boolean: true = Active, false = Inactive.
+// Older records may be missing it, so anything other than false is Active.
+const isActive = (inv) => inv?.status !== false;
+const statusLabel = (inv) => (isActive(inv) ? "Active" : "Inactive");
+
+export default function InvoicePreviewComponent({ id, lang }) {
+
+    const INVOICE_BASE = `/${lang}/apps/invoices`;
+
+    const router = useRouter();
+    // NOTE: assumes useApi exposes doDelete. Adjust the name if yours differs.
+    const { doGet, doDelete, token } = useApi();
+
+    const [editData, setEditData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [deleting, setDeleting] = useState(false);
+
+    useEffect(() => {
+        if (!token || !id) return;
+
+        let active = true;
+
+        const fetchEditData = async () => {
+            setLoading(true);
+            setError("");
+
+            try {
+                const response = await doGet(`company/invoice/edit/data/${id}`);
+                const result = response?.data ?? response;
+
+                if (active) setEditData(result || null);
+            } catch (err) {
+                console.error("Failed to fetch invoice:", err);
+                if (active) {
+                    setEditData(null);
+                    setError("Could not load this invoice.");
+                }
+            } finally {
+                if (active) setLoading(false);
+            }
+        };
+
+        fetchEditData();
+
+        return () => {
+            active = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token, id]);
+
+    const handleDelete = async () => {
+        if (!window.confirm("Delete this invoice? This cannot be undone.")) return;
+
+        setDeleting(true);
+
+        try {
+            // NOTE: assumed endpoint. Match it to your InvoiceAPIController route.
+            await doDelete(`company/invoice/delete/${id}`);
+            router.push(INVOICE_BASE);
+        } catch (err) {
+            console.error("Failed to delete invoice:", err);
+            setError("Could not delete this invoice.");
+            setDeleting(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <Box sx={{ width: "100%", maxWidth: 1600, mx: "auto", p: { xs: 1.5, md: 3 } }}>
+                <Skeleton variant="text" width={200} height={32} />
+                <Skeleton variant="rounded" height={520} sx={{ mt: 2, borderRadius: 2 }} />
+            </Box>
+        );
+    }
+
+    if (!editData) {
+        return (
+            <Box sx={{ width: "100%", maxWidth: 1600, mx: "auto", p: { xs: 1.5, md: 3 } }}>
+                <Button component={Link} href={INVOICE_BASE} startIcon={<ArrowBackIcon />}>
+                    Back to invoices
+                </Button>
+                <Typography sx={{ mt: 2 }} color="text.secondary">
+                    {error || "Invoice not found."}
+                </Typography>
+            </Box>
+        );
+    }
+
+    const items = Array.isArray(editData.items) ? editData.items : [];
+    const t = editData.totals?.total != null ? editData.totals : calcTotals(items);
+    const contact = contacts.find((c) => c.value === editData.billedTo);
     const phone = contact?.sub?.startsWith("Mobile:") ? contact.sub.replace("Mobile: ", "") : "";
+    const invoiceId = editData._id ?? id;
 
     const meta = [
-        ["Invoice date", ddmmyyyy(invoice.invoiceDate)],
-        ["Reference", `#${invoice.ref}`],
-        ["Due date", ddmmyyyy(invoice.dueDate)],
+        ["Invoice date", formatDate(editData.invoiceDate)],
+        ["Reference", `#${editData.ref}`],
+        ["Due date", formatDate(editData.dueDate)],
     ];
 
     return (
@@ -67,13 +179,19 @@ export default function InvoicePreviewComponent({ invoice }) {
                 <IconButton component={Link} href={INVOICE_BASE} aria-label="Back to invoices" size="small">
                     <ArrowBackIcon fontSize="small" />
                 </IconButton>
-                <Typography sx={{ fontSize: 18, fontWeight: 700 }}>Invoice #{invoice.ref}</Typography>
+                <Typography sx={{ fontSize: 18, fontWeight: 700 }}>Invoice #{editData.ref}</Typography>
                 <Typography sx={{ fontSize: 12, fontWeight: 700, px: 1, py: 0.25, borderRadius: 1, bgcolor: "action.selected" }}>
-                    {invoice.status}
+                    {statusLabel(editData)}
                 </Typography>
             </Stack>
 
-            {/* Sheet (left) + actions and approval (right) */}
+            {error && (
+                <Typography color="error" sx={{ mb: 2, fontSize: 13, ...noPrint }}>
+                    {error}
+                </Typography>
+            )}
+
+            {/* Sheet (left) + actions (right) */}
             <Box
                 sx={{
                     display: "grid", gap: 3, alignItems: "start",
@@ -103,7 +221,7 @@ export default function InvoicePreviewComponent({ invoice }) {
                                 Tax invoice
                             </Typography>
                             <Typography sx={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, mb: 2, textAlign: { sm: "right" } }}>
-                                {invoice.status}
+                                {editData.invoiceNumber || `INV-${editData.sequence ?? editData.ref}`}
                             </Typography>
                             <Box sx={{ borderTop: `1px solid ${line}`, pt: 1.5 }}>
                                 {meta.map(([k, v]) => (
@@ -119,7 +237,7 @@ export default function InvoicePreviewComponent({ invoice }) {
                     <Divider sx={{ my: 3, borderColor: line }} />
 
                     <Typography sx={{ fontSize: 12, fontWeight: 600, color: "text.secondary" }}>Billed to</Typography>
-                    <Typography sx={{ fontSize: 16, fontWeight: 700, mt: 0.5 }}>{invoice.billedToName}</Typography>
+                    <Typography sx={{ fontSize: 16, fontWeight: 700, mt: 0.5 }}>{editData.billedToName}</Typography>
                     {phone && <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{phone}</Typography>}
 
                     <Divider sx={{ my: 3, borderColor: line }} />
@@ -138,23 +256,31 @@ export default function InvoicePreviewComponent({ invoice }) {
                                     <TableCell sx={th}>Description</TableCell>
                                     <TableCell sx={th}>Chart of account</TableCell>
                                     <TableCell sx={th} align="right">Amount</TableCell>
-                                    <TableCell sx={th} align="right">GST (18%)</TableCell>
+                                    <TableCell sx={th} align="right">GST</TableCell>
                                     <TableCell sx={th} align="right">Total</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {invoice.items.map((it) => {
-                                    const l = calcLine(it.amount, it.taxRate);
-                                    return (
-                                        <TableRow key={it.id}>
-                                            <TableCell sx={{ py: 1.5 }}>{it.item || it.property}</TableCell>
-                                            <TableCell sx={{ color: "text.secondary" }}>{it.chartOfAccount}</TableCell>
-                                            <TableCell align="right" sx={num}>{inr(it.amount)}</TableCell>
-                                            <TableCell align="right" sx={num}>{inr(l.tax)}</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 600, ...num }}>{inr(l.total)}</TableCell>
-                                        </TableRow>
-                                    );
-                                })}
+                                {items.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} align="center" sx={{ py: 3, color: "text.secondary" }}>
+                                            No line items
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    items.map((it, idx) => {
+                                        const l = calcLine(it.amount, it.taxRate);
+                                        return (
+                                            <TableRow key={it._id ?? it.id ?? idx}>
+                                                <TableCell sx={{ py: 1.5 }}>{it.item || it.property}</TableCell>
+                                                <TableCell sx={{ color: "text.secondary" }}>{it.chartOfAccount}</TableCell>
+                                                <TableCell align="right" sx={num}>{inr(it.amount)}</TableCell>
+                                                <TableCell align="right" sx={num}>{inr(l.tax)}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 600, ...num }}>{inr(l.total)}</TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                )}
                             </TableBody>
                         </Table>
                     </Box>
@@ -194,14 +320,11 @@ export default function InvoicePreviewComponent({ invoice }) {
                     </Typography>
                 </Paper>
 
-                {/* Side column: actions + approval workflow */}
+                {/* Side column: actions */}
                 <Stack spacing={2} sx={{ position: { lg: "sticky" }, top: { lg: 16 }, ...noPrint }}>
                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: line }}>
                         <Stack spacing={1}>
-                            <Button fullWidth variant="contained" startIcon={<AccessTimeIcon />}>
-                                Submit for approval
-                            </Button>
-                            <Button fullWidth variant="outlined" component={Link} href={`${INVOICE_BASE}/create/${invoice.id}`}
+                            <Button fullWidth variant="contained" component={Link} href={`${INVOICE_BASE}/create/${invoiceId}`}
                                 startIcon={<EditOutlinedIcon />}>
                                 Edit invoice
                             </Button>
@@ -209,13 +332,12 @@ export default function InvoicePreviewComponent({ invoice }) {
                                 onClick={() => window.print()} sx={{ borderColor: "#d1d5db" }}>
                                 Print
                             </Button>
-                            <Button fullWidth variant="text" color="error" startIcon={<DeleteOutlineIcon />}>
-                                Delete invoice
+                            <Button fullWidth variant="text" color="error" startIcon={<DeleteOutlineIcon />}
+                                onClick={handleDelete} disabled={deleting}>
+                                {deleting ? "Deleting..." : "Delete invoice"}
                             </Button>
                         </Stack>
                     </Paper>
-
-                    <ApprovalWorkflow />
                 </Stack>
             </Box>
         </Box>

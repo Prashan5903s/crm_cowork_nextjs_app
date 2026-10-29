@@ -128,7 +128,8 @@ const Row = ({ label, value, bg = "action.hover", color, strong }) => (
 );
 
 /* ================= Wrapper: loads data, then mounts the form ================= */
-export default function ContractForm({ id, kind }) {
+export default function ContractForm({ id, kind, lang }) {
+
     const { doGet, token } = useApi();
 
     const [state, setState] = useState({ ready: false, existing: null });
@@ -191,11 +192,11 @@ export default function ContractForm({ id, kind }) {
 
     if (!state.ready) return null;
 
-    return <Form createData={createData} existing={state.existing} kind={kind} />;
+    return <Form createData={createData} existing={state.existing} kind={kind} lang={lang} />;
 }
 
 /* ================= The form ================= */
-function Form({ existing, kind, createData }) {
+function Form({ existing, kind, createData, lang }) {
     const router = useRouter();
     const { doPost, token } = useApi();
 
@@ -262,19 +263,6 @@ function Form({ existing, kind, createData }) {
         const res = await call("save", payload());
         if (res) setNotice("Contract saved");
         return res;
-    };
-
-    const submit = async () => {
-        if (!tenant) return setError("Add a tenant before submitting.");
-        if (!properties.length) return setError("Add at least one property before submitting.");
-        if (!details.length) return setError("Add at least one detail line before submitting.");
-
-        if (!(await save())) return; // save first
-        const res = await call("submit");
-        if (res) {
-            setStatus("Pending");
-            router.push(BASE);
-        }
     };
 
     const remove = async () => {
@@ -402,8 +390,10 @@ function Form({ existing, kind, createData }) {
             <Button variant="contained" color="error" startIcon={<Trash2 size={14} />} disabled={locked} onClick={() => setConfirmDelete(true)}>
                 Delete Contract
             </Button>
-            <Button variant="outlined" color="inherit" disabled={locked} onClick={save}>Save Contract</Button>
-            <Button variant="contained" onClick={submit} disabled={locked}>Submit for Approval</Button>
+            <Button variant="contained" disabled={locked} onClick={() => {
+                save()
+                router.push(`/${lang}/apps/contract`)
+            }}>Save Contract</Button>
         </Stack>
     );
 

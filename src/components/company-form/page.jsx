@@ -229,7 +229,7 @@ const UserFormLayout = () => {
       if (!response.ok) throw new Error(result?.message || 'Unable to save company')
 
       toast.success(`Company ${id ? 'updated' : 'created'} successfully!`)
-      router.push(`/${locale}/apps/society/list`)
+      router.push(`/${locale}/apps/company/list`)
     } catch (error) {
       console.error('Company form submission failed:', error)
       toast.error(error.message || 'Something went wrong')
@@ -390,7 +390,7 @@ const UserFormLayout = () => {
           <Divider />
           <CardActions>
             <Button variant="contained" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Submit'}</Button>
-            <Button variant="outlined" color="error" type="button" onClick={() => router.push(`/${locale}/apps/society/list`)}>Cancel</Button>
+            <Button variant="outlined" color="error" type="button" onClick={() => router.push(`/${locale}/apps/company/list`)}>Cancel</Button>
           </CardActions>
         </form>
       </Card>

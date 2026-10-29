@@ -149,7 +149,7 @@ const UserListTable = ({ userData }) => {
         )
       },
       columnHelper.accessor('first_name', {
-        header: 'Society',
+        header: 'company',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             {getAvatar({ avatar: row.original.photo, fullName: row.original.first_name + " " + row.original.last_name })}
@@ -202,7 +202,7 @@ const UserListTable = ({ userData }) => {
                   menuItemProps: {
                     className: 'flex items-center gap-2 text-textSecondary',
                     onClick: (() => {
-                      router.push(`/${locale}/apps/society/form/${row.original._id}`)
+                      router.push(`/${locale}/apps/company/form/${row.original._id}`)
                     })
                   }
                 }
@@ -274,13 +274,13 @@ const UserListTable = ({ userData }) => {
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
-              placeholder='Search Society'
+              placeholder='Search company'
               className='max-sm:is-full'
             />
             <Button
               variant='contained'
               startIcon={<i className='tabler-plus' />}
-              onClick={() => router.push(`/${locale}/apps/society/form`)}
+              onClick={() => router.push(`/${locale}/apps/company/form`)}
               className='max-sm:is-full'
             >
               Add New company

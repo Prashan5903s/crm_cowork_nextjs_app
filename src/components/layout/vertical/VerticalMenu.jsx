@@ -242,7 +242,7 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             )}
           {permissArray?.isSuperAdmin && (
             <SubMenu label={'Company'} icon={<i className='tabler-user' />}>
-              <MenuItem href={`/${locale}/apps/society/list`}>List</MenuItem>
+              <MenuItem href={`/${locale}/apps/company/list`}>List</MenuItem>
             </SubMenu>
           )}
           {permissArray?.isCompany && permissArray?.hasBillingPermission && (
@@ -333,6 +333,14 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               icon={<i className='tabler-file-invoice' />}
             >
               Invoices
+            </MenuItem>
+          )}
+          {permissArray?.isCompany && (
+            <MenuItem
+              href={`/${locale}/apps/payment`}
+              icon={<i className='tabler-credit-card' />}
+            >
+              Payment
             </MenuItem>
           )}
           {permissArray?.isCompany && (
