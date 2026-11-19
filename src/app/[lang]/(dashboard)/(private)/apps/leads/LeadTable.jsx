@@ -24,6 +24,9 @@ const EMPTY_FILTERS = { search: '', leadStatus: '', leadSource: '', converted: '
 
 const statusTitle = s => s?.title ?? s?.name ?? ''
 
+// single rule used by both list and kanban views
+const canSendProposal = lead => lead?.lead_status?.name?.trim().toLowerCase() === 'qualified'
+
 const formatDate = value => {
   const d = value ? new Date(value) : null
 
@@ -106,43 +109,39 @@ const ListView = ({ rows, actions }) => {
           </TableHead>
           <TableBody>
             {visible.length === 0 && (
-              <TableRow><TableCell colSpan={8} align="center">No leads match these filters</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} align="center">No leads match these filters</TableCell></TableRow>
             )}
-            {visible.map(lead => {
-              const st = lead.lead_status?.status
-
-              return (
-                <TableRow key={lead._id} hover>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Avatar sx={{ width: 34, height: 34 }}>{getInitials(lead.name || '')}</Avatar>
-                      <Box>
-                        <Typography fontWeight={500}>{lead.name}</Typography>
-                        <Typography variant="body2" color="text.secondary">{lead.email}</Typography>
-                      </Box>
+            {visible.map(lead => (
+              <TableRow key={lead._id} hover>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <Avatar sx={{ width: 34, height: 34 }}>{getInitials(lead.name || '')}</Avatar>
+                    <Box>
+                      <Typography fontWeight={500}>{lead.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">{lead.email}</Typography>
                     </Box>
-                  </TableCell>
-                  <TableCell>{lead.phone}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <IconButton size="small" aria-label="Add follow up" onClick={() => actions.addFollowUp(lead)}><i className="tabler-plus" /></IconButton>
-                      <IconButton size="small" aria-label="View follow ups" onClick={() => actions.viewFollowUps(lead)}><i className="tabler-eye" /></IconButton>
-                      <Typography variant="body2">{lead.followUp?.length || 0}</Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    {String(lead?.lead_status?.status?.name) === "Converted" && (
-                      <IconButton size="small" aria-label="Send proposal" onClick={() => actions.sendProposal(lead)}><i className="tabler-send" /></IconButton>
-                    )}
-                  </TableCell>
-                  <TableCell>{lead.source?.name}</TableCell>
-                  <TableCell><StatusDot color={lead?.lead_status?.status?.color} title={lead?.lead_status?.status?.name || '—'} /></TableCell>
-                  <TableCell>
-                    <IconButton size="small" aria-label="Edit lead" onClick={() => actions.edit(lead)}><i className="tabler-edit" /></IconButton>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
+                  </Box>
+                </TableCell>
+                <TableCell>{lead.phone}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton size="small" aria-label="Add follow up" onClick={() => actions.addFollowUp(lead)}><i className="tabler-plus" /></IconButton>
+                    <IconButton size="small" aria-label="View follow ups" onClick={() => actions.viewFollowUps(lead)}><i className="tabler-eye" /></IconButton>
+                    <Typography variant="body2">{lead.followUp?.length || 0}</Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  {canSendProposal(lead) && (
+                    <IconButton size="small" aria-label="Send proposal" onClick={() => actions.sendProposal(lead)}><i className="tabler-send" /></IconButton>
+                  )}
+                </TableCell>
+                <TableCell>{lead.source?.name}</TableCell>
+                <TableCell><StatusDot color={lead?.lead_status?.color} title={lead?.lead_status?.name || '—'} /></TableCell>
+                <TableCell>
+                  <IconButton size="small" aria-label="Edit lead" onClick={() => actions.edit(lead)}><i className="tabler-edit" /></IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </Box>
@@ -178,7 +177,7 @@ const KanbanCard = ({ lead, color, actions }) => {
       <Menu anchorEl={anchor} open={!!anchor} onClose={close}>
         <MenuItem onClick={run(actions.addFollowUp)}>Add follow up</MenuItem>
         <MenuItem onClick={run(actions.viewFollowUps)}>View follow ups</MenuItem>
-        {String(lead.lead_status_id) === PROPOSAL_STATUS_ID && <MenuItem onClick={run(actions.sendProposal)}>Send proposal</MenuItem>}
+        {canSendProposal(lead) && <MenuItem onClick={run(actions.sendProposal)}>Send proposal</MenuItem>}
         <MenuItem onClick={run(actions.edit)}>Edit</MenuItem>
       </Menu>
     </Box>
@@ -217,9 +216,7 @@ const KanbanView = ({ groups, onAdd, actions }) => (
 )
 
 export default function LeadTable({
-  isTable,
   setIsTable,
-  selectLeadStatusId,
   setSelectLeadStatusId,
   tableData,
   fetchLeadsData,
@@ -282,31 +279,34 @@ export default function LeadTable({
   const actions = useMemo(
     () => ({
       addFollowUp: l => {
-        setSelectedLead(l);
-        setFollowUpOpen(true);
+        setSelectedLead(l)
+        setFollowUpOpen(true)
       },
       viewFollowUps: l => {
-        setSelectedLead(l);
-        setFollowUpListOpen(true);
+        setSelectedLead(l)
+        setFollowUpListOpen(true)
       },
       sendProposal: l => {
-        setSelectedLead(l);
-        setProposalOpen(true);
+        setSelectedLead(l)
+        setProposalOpen(true)
       },
       edit: l => {
-        setEditLead(l);
-        setSelectedLead(l);
-        setDrawerOpen(true);
-      },
+        setEditLead(l)
+        setSelectedLead(l)
+        setDrawerOpen(true)
+      }
     }),
     []
-  );
+  )
 
-  const openCreate = useCallback(statusId => {
-    setEditLead(null);
-    setSelectLeadStatusId(statusId);
-    setDrawerOpen(true);
-  }, [setSelectLeadStatusId]);
+  const openCreate = useCallback(
+    statusId => {
+      setEditLead(null)
+      setSelectLeadStatusId(statusId)
+      setDrawerOpen(true)
+    },
+    [setSelectLeadStatusId]
+  )
 
   const switchView = next => {
     if (next === view) return
@@ -331,7 +331,7 @@ export default function LeadTable({
       'Sanctioned load': l.sanctioned_load ?? '',
       'No. of follow ups': l.followUp?.length || 0,
       'Latest follow up': l.followUp?.length ? formatDate(l.followUp[l.followUp.length - 1]?.follow_up_date) : '',
-      Status: view === 'kanban' ? l.kanban_status : statusTitle(l.lead_status?.status),
+      Status: view === 'kanban' ? l.kanban_status : l.lead_status?.name || statusTitle(l.lead_status?.status),
       Source: l.source?.title || l.source?.name || '',
       Converted: l.is_converted ? 'Yes' : 'No',
       'Created at': formatDate(l.created_at)
@@ -394,11 +394,11 @@ export default function LeadTable({
           open={drawerOpen}
           editLead={editLead}
           onClose={() => {
-            setDrawerOpen(false);
-            setEditLead(null);
+            setDrawerOpen(false)
+            setEditLead(null)
           }}
           onOpenLead={r => {
-            const all = view === 'kanban' ? tableData.flatMap(g => g.leads || []) : tableData
+            const all = view === 'kanban' ? (tableData || []).flatMap(g => g.leads || []) : tableData || []
             const lead = all.find(l => l._id === r._id)
 
             if (lead) actions.edit(lead)
@@ -409,20 +409,28 @@ export default function LeadTable({
       )}
       {followUpOpen && (
         <FollowUpDialog
-          open={followUpOpen} setOpen={setFollowUpOpen} tableData={tableData}
-          selectedLead={selectedLead} selectedLeadId={selectedLead?._id} fetchLeadsData={fetchLeadsData}
+          open={followUpOpen}
+          setOpen={setFollowUpOpen}
+          tableData={tableData}
+          selectedLead={selectedLead}
+          selectedLeadId={selectedLead?._id}
+          fetchLeadsData={fetchLeadsData}
         />
       )}
       {followUpListOpen && (
         <FollowUpTableDialog
-          open={followUpListOpen} setOpen={setFollowUpListOpen}
-          tableData={selectedLead} selectedLeadId={selectedLead?._id}
+          open={followUpListOpen}
+          setOpen={setFollowUpListOpen}
+          tableData={selectedLead}
+          selectedLeadId={selectedLead?._id}
         />
       )}
       {proposalOpen && (
         <ProposalDialog
-          open={proposalOpen} setOpen={setProposalOpen}
-          selectedLead={selectedLead} selectLeadId={selectedLead?._id}
+          open={proposalOpen}
+          setOpen={setProposalOpen}
+          selectedLead={selectedLead}
+          fetchLeadsData={fetchLeadsData}
         />
       )}
     </Card>

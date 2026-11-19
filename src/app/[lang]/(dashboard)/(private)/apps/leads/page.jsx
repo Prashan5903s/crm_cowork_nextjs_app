@@ -1,68 +1,72 @@
 // MUI Imports
 'use client'
 
-import { useState, useEffect } from 'react'
-
-import { useSession } from 'next-auth/react'
+import { useState, useEffect, useCallback } from 'react'
 
 import Grid from '@mui/material/Grid2'
 
-import SkeletonTableComponent from '@/components/skeleton/table/page'
-
-import LeadTable from "./LeadTable"
+import LeadTable from './LeadTable'
 
 import { useApi } from '@/utils/api'
 
 const Lead = () => {
+  const [leadsData, setLeadsData] = useState(null) // null = loading
+  const [view, setView] = useState('kanban')
+  const [isTable, setIsTable] = useState(true)
+  const [selectLeadStatusId, setSelectLeadStatusId] = useState()
 
-    const [leadsData, setLeadsData] = useState([]);
-    const [view, setView] = useState('kanban')
-    const [isTable, setIsTable] = useState(true);
-    const [selectLeadStatusId, setSelectLeadStatusId] = useState()
+  const { doGet, token } = useApi()
 
-    const { doGet, token } = useApi()
+  // manual refresh (after create / edit / follow up / proposal)
+  const fetchLeadsData = useCallback(async () => {
+    try {
+      const response = await doGet(`company/leads/data/${view}`)
 
-    async function fetchLeadsData() {
-        try {
-
-            const response = await doGet(`company/leads/data/${view}`)
-            const result = response.data ?? response;
-            setLeadsData(result)
-
-        } catch (error) {
-            throw new Error(error);
-        }
+      setLeadsData(response.data ?? response)
+    } catch (error) {
+      console.error('Error fetching leads:', error)
     }
+  }, [view, token])
 
-    useEffect(() => {
-        if (token && view) {
-            fetchLeadsData();
+  // fetch on mount / view change, ignoring stale responses
+  useEffect(() => {
+    if (!token || !view) return
+
+    let ignore = false
+
+      ; (async () => {
+        try {
+          const response = await doGet(`company/leads/data/${view}`)
+
+          if (!ignore) setLeadsData(response.data ?? response)
+        } catch (error) {
+          console.error('Error fetching leads:', error)
         }
-    }, [token, view])
+      })()
 
-    return (
-        <Grid container spacing={6}>
-            <Grid size={{ xs: 12 }}>
-                {leadsData ? (
-                    <LeadTable
-                        isTable={isTable}
-                        setIsTable={setIsTable}
-                        tableData={leadsData}
-                        fetchLeadsData={fetchLeadsData}
-                        view={view}
-                        setView={setView}
-                        setLeadsData={setLeadsData}
-                        setSelectLeadStatusId={setSelectLeadStatusId}
-                        selectLeadStatusId={selectLeadStatusId}
-                    />
-                )
-                    : (
-                        <SkeletonTableComponent />
-                    )
-                }
-            </Grid>
-        </Grid>
-    )
+    return () => {
+      ignore = true
+    }
+  }, [token, view])
+
+  return (
+    <Grid container spacing={6}>
+      <Grid size={{ xs: 12 }}>
+        {/* LeadTable stays mounted; it shows its own loading state while tableData is null */}
+        <LeadTable
+          isTable={isTable}
+          setIsTable={setIsTable}
+          tableData={leadsData}
+          fetchLeadsData={fetchLeadsData}
+          view={view}
+          setView={setView}
+          setLeadsData={setLeadsData}
+          setSelectLeadStatusId={setSelectLeadStatusId}
+          selectLeadStatusId={selectLeadStatusId}
+        />
+      </Grid>
+    </Grid>
+  )
 }
 
 export default Lead
