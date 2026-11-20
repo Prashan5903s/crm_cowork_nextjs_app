@@ -2,7 +2,7 @@ const data = [
   {
     id: '1',
     name: 'Cowork Dashboard',
-    url: '/dashboards/society',
+    url: '/dashboard',
     icon: 'tabler-chart-pie-2',
     section: 'Dashboards'
   },

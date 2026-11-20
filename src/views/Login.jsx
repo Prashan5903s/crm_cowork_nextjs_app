@@ -148,7 +148,7 @@ const Login = ({ mode }) => {
 
     if (res?.ok) {
 
-      router.replace(`/${locale}/dashboards/society`);
+      router.replace(`/${locale}/dashboard`);
 
     }
   };

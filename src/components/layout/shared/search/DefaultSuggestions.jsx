@@ -19,7 +19,7 @@ const defaultSuggestions = [
       },
       {
         label: 'Cowork',
-        href: '/dashboards/society',
+        href: '/dashboard',
         icon: 'tabler-chart-pie-2'
       },
       {

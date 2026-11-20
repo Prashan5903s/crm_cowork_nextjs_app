@@ -8,7 +8,7 @@ const horizontalMenuData = dictionary => [
       {
         label: "Cowork",
         icon: 'tabler-chart-pie-2',
-        href: '/dashboards/society'
+        href: '/dashboard'
       },
       {
         label: dictionary['navigation'].analytics,

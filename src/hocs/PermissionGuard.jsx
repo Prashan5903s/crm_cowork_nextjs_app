@@ -18,16 +18,16 @@ const fetchPermission = async (url, token) => {
 
         if (!response.ok) {
             console.error('Permission API error:', await response.text())
-            
+
             return null
         }
 
         const data = await response.json()
-        
+
         return data?.data || null
     } catch (error) {
         console.error('Permission fetch error:', error)
-        
+
         return null
     }
 }
@@ -60,7 +60,7 @@ export default async function PermissionGuardServer({
         }
 
         if (permissions?.notUser) {
-            redirect(`/${locale}/dashboards/society`)
+            redirect(`/${locale}/dashboard`)
         }
 
         // fallback redirect

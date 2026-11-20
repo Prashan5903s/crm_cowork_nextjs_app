@@ -21,7 +21,7 @@ const noResultData = [
   },
   {
     label: 'Society',
-    href: '/dashboards/society',
+    href: '/dashboard',
     icon: 'tabler-chart-donut-3'
   }
 ]

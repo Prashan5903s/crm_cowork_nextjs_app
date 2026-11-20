@@ -17,7 +17,7 @@
  */
 const themeConfig = {
   templateName: 'Cowork portal',
-  homePageUrl: '/dashboards/society',
+  homePageUrl: '/dashboard',
   settingsCookieName: 'vuexy-mui-next-demo-1',
   mode: 'light', // 'system', 'light', 'dark'
   skin: 'default', // 'default', 'bordered'

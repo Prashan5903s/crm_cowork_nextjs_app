@@ -7,7 +7,7 @@ exports["default"] = void 0;
 var data = [{
   id: '1',
   name: 'Cowork Dashboard',
-  url: '/dashboards/society',
+  url: '/dashboard',
   icon: 'tabler-chart-pie-2',
   section: 'Dashboards'
 }, {
@@ -676,5 +676,7 @@ var data = [{
   icon: 'tabler-layout-board-split',
   section: 'Forms & Tables'
 }];
+
 var _default = data;
+
 exports["default"] = _default;

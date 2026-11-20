@@ -13,13 +13,13 @@ const nextConfig = {
     return [
       {
         source: '/',
-        destination: '/en/dashboards/society',
+        destination: '/en/dashboard',
         permanent: true,
         locale: false
       },
       {
         source: '/:lang(en|fr|ar)',
-        destination: '/:lang/dashboards/society',
+        destination: '/:lang/dashboard',
         permanent: true,
         locale: false
       },

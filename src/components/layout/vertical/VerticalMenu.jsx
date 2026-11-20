@@ -102,11 +102,14 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
         renderExpandedMenuItemIcon={{ icon: <i className='tabler-circle text-xs' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
-        <SubMenu label='Dashboards' icon={<i className='tabler-smart-home' />}>
-          {permissArray?.notUser && <MenuItem href={`/${locale}/dashboards/society`}>Company</MenuItem>}
 
-          {permissArray?.isUser && <MenuItem href={`/${locale}/dashboards/user/owner`}>Owner</MenuItem>}
-        </SubMenu>
+        <MenuItem
+          key='contacts'
+          href={`/${locale}/dashboard`}
+          icon={<i className='tabler-address-book' />}
+        >
+          Dashboard
+        </MenuItem>
         <MenuSection label='App Pages'>
           {permissArray?.isSuperAdmin && (
             <SubMenu label='Role & Permission' icon={<i className='tabler-lock' />}>
@@ -343,14 +346,16 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               Payment
             </MenuItem>
           )}
-          {permissArray?.isCompany && (
+
+          {/* {permissArray?.isCompany && (
             <SubMenu label={'Report'} icon={<i className='tabler-graph' />}>
               <MenuItem href={`/${locale}/apps/report/payment-report`}>{'Payment report'}</MenuItem>
               <MenuItem href={`/${locale}/apps/report/financial-report`}>{'Financial report'}</MenuItem>
               <MenuItem href={`/${locale}/apps/report/complain-report`}>{'Complain report'}</MenuItem>
               <MenuItem href={`/${locale}/apps/report/sla-report`}>{'SLA report'}</MenuItem>
             </SubMenu>
-          )}
+          )} */}
+
           {permissArray?.isCompany && (
             <SubMenu label={'Settings'} icon={<i className='tabler-settings' />}>
               <MenuItem href={`/${locale}/apps/settings/asset-category-setting`}>{'Asset Category'}</MenuItem>

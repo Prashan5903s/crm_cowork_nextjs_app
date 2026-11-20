@@ -71,7 +71,7 @@ export default function PermissionGuard({ children, locale, element }) {
                 }
 
                 if (permissions?.notUser || permissions?.isCompany) {
-                    router.push(`/${locale}/dashboards/society`);
+                    router.push(`/${locale}/dashboard`);
                 }
 
                 if (permissions?.notUser || permissions?.isSuperAdmin) {
