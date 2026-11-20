@@ -6,7 +6,7 @@ const horizontalMenuData = dictionary => [
     children: [
       // This is how you will normally render menu item
       {
-        label: "Cowork",
+        label: "DW Cowork",
         icon: 'tabler-chart-pie-2',
         href: '/dashboard'
       },

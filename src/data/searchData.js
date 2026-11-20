@@ -1,7 +1,7 @@
 const data = [
   {
     id: '1',
-    name: 'Cowork Dashboard',
+    name: 'DW Cowork Dashboard',
     url: '/dashboard',
     icon: 'tabler-chart-pie-2',
     section: 'Dashboards'

@@ -18,7 +18,7 @@ const defaultSuggestions = [
         icon: 'tabler-trending-up'
       },
       {
-        label: 'Cowork',
+        label: 'DW Cowork',
         href: '/dashboard',
         icon: 'tabler-chart-pie-2'
       },

@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", {
 exports["default"] = void 0;
 var data = [{
   id: '1',
-  name: 'Cowork Dashboard',
+  name: 'DW Cowork Dashboard',
   url: '/dashboard',
   icon: 'tabler-chart-pie-2',
   section: 'Dashboards'
