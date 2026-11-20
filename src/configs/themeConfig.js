@@ -16,7 +16,7 @@
  * Another way is to clear the cookie from the browser's Application/Storage tab and then reload the page.
  */
 const themeConfig = {
-  templateName: 'Society portal',
+  templateName: 'Cowork portal',
   homePageUrl: '/dashboards/society',
   settingsCookieName: 'vuexy-mui-next-demo-1',
   mode: 'light', // 'system', 'light', 'dark'

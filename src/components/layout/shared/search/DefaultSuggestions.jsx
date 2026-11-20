@@ -18,7 +18,7 @@ const defaultSuggestions = [
         icon: 'tabler-trending-up'
       },
       {
-        label: 'Society',
+        label: 'Cowork',
         href: '/dashboards/society',
         icon: 'tabler-chart-pie-2'
       },
