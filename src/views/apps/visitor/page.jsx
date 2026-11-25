@@ -54,8 +54,6 @@ import tableStyles from '@core/styles/table.module.css'
 
 import TablePaginationComponent from '@components/TablePaginationComponent'
 
-import { usePermissionList } from '@/utils/getPermission'
-
 import { getInitials } from '@/utils/getInitials'
 
 import CustomTextField from '@/@core/components/mui/TextField'
@@ -673,28 +671,11 @@ const VisitorTable = () => {
   const [selectedAction, setSelectedAction] = useState(null)
   const [selectedVisitorId, setSelectedVisitorId] = useState('')
 
-  const getPermissions = usePermissionList()
-  const [permissions, setPermissions] = useState({})
-
   const getAvatar = ({ avatar, fullName }) => {
     if (avatar) return <CustomAvatar src={`${public_url}/uploads/visitor/${avatar}`} size={34} />
 
     return <CustomAvatar size={34}>{getInitials(fullName || '')}</CustomAvatar>
   }
-
-  useEffect(() => {
-    const fetchPermissions = async () => {
-      try {
-        const result = await getPermissions()
-
-        setPermissions(result)
-      } catch (error) {
-        console.error('Error fetching permissions:', error)
-      }
-    }
-
-    if (getPermissions) fetchPermissions()
-  }, [getPermissions])
 
   const fetchVisitors = async () => {
     try {
