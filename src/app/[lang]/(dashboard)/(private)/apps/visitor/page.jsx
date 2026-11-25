@@ -8,15 +8,15 @@ import PermissionGuard from '@/hocs/PermissionClientGuard'
 
 const VisitorDashboard = () => {
 
-    const { lang: locale } = useParams();
+  const { lang: locale } = useParams();
 
-    return (
-        <>
-            <PermissionGuard locale={locale} element="hasVisitorPermission">
-                <Visitor />
-            </PermissionGuard>
-        </>
-    )
+  return (
+    <>
+
+      <Visitor />
+
+    </>
+  )
 }
 
 export default VisitorDashboard;
