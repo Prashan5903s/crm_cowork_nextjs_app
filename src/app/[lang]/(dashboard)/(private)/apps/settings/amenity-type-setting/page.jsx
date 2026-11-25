@@ -1,5 +1,5 @@
 import PermissionGuard from '@/hocs/PermissionGuard';
-import AmenityType from '@/views/apps/settings/amnity-type-setting/index';
+import AmenityType from '@/views/apps/settings/visitor-type-setting/index';
 
 export default async function TowerApp({ params }) {
 

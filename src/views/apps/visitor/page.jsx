@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo } from 'react'
 
 import {
   Card,
@@ -8,60 +8,47 @@ import {
   Box,
   TextField,
   Button,
-  Paper,
   Dialog,
-  FormControlLabel,
   Checkbox,
   CardContent,
   Typography,
   DialogContent,
   DialogTitle,
   DialogActions
-} from "@mui/material"
+} from '@mui/material'
 
 import Grid from '@mui/material/Grid2'
 
-import { QRCodeCanvas } from "qrcode.react";
+import { QRCodeCanvas } from 'qrcode.react'
 
-import utc from "dayjs/plugin/utc";
+import utc from 'dayjs/plugin/utc'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
 
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 
-import {
-  LocalizationProvider,
-  TimePicker,
-} from "@mui/x-date-pickers";
+import { LocalizationProvider, TimePicker } from '@mui/x-date-pickers'
 
 import { valibotResolver } from '@hookform/resolvers/valibot'
 
-import {
-  object,
-  string,
-  maxLength,
-  minLength,
-  regex,
-  pipe,
-  optional,
-  boolean,
-} from 'valibot'
+import { object, string, maxLength, minLength, regex, pipe, optional } from 'valibot'
 
 import {
   createColumnHelper,
   flexRender,
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
+  getPaginationRowModel
 } from '@tanstack/react-table'
 
 import { useForm, Controller } from 'react-hook-form'
 
-import { useSession } from "next-auth/react"
+import { useSession } from 'next-auth/react'
 
-import { toast } from "react-toastify"
+import { toast } from 'react-toastify'
 
-import dayjs from "dayjs"
+import dayjs from 'dayjs'
 
-import CustomAvatar from '@core/components/mui/Avatar';
+import CustomAvatar from '@core/components/mui/Avatar'
 
 import tableStyles from '@core/styles/table.module.css'
 
@@ -69,13 +56,29 @@ import TablePaginationComponent from '@components/TablePaginationComponent'
 
 import { usePermissionList } from '@/utils/getPermission'
 
-import { getInitials } from '@/utils/getInitials';
+import { getInitials } from '@/utils/getInitials'
 
-import CustomTextField from "@/@core/components/mui/TextField"
+import CustomTextField from '@/@core/components/mui/TextField'
 
-import DialogCloseButton from "@/components/dialogs/DialogCloseButton"
+import DialogCloseButton from '@/components/dialogs/DialogCloseButton'
 
-import FormatTime from '@/utils/formatTime';
+import FormatTime from '@/utils/formatTime'
+
+dayjs.extend(utc)
+dayjs.extend(customParseFormat)
+
+const TIME_FORMAT = 'hh:mm A'
+const DATE_TIME_FORMAT = `YYYY-MM-DD ${TIME_FORMAT}`
+
+const ID_PROOF_TYPES = ['Aadhaar', 'PAN', 'Driving License', 'Voter ID', 'Passport', 'Other']
+
+const STATUS_LABELS = {
+  '1': 'Invited',
+  '2': 'Rejected',
+  '3': 'Expired',
+  '4': 'Accepted',
+  '5': 'Rejected'
+}
 
 // Debounced Input
 const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...props }) => {
@@ -91,255 +94,193 @@ const DebouncedInput = ({ value: initialValue, onChange, debounce = 500, ...prop
     }, debounce)
 
     return () => clearTimeout(timeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
   return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
 }
 
-dayjs.extend(utc);
-
 const columnHelper = createColumnHelper()
 
-// ---- helper to build schema dynamically based on isFrequent + apartment requirement ----
-const buildSchema = (isFrequent, requireApartment) =>
-  object({
-    visitor_name: pipe(string(), minLength(1, "Visitor name is required")),
-    visitor_contact: pipe(
-      string(),
-      minLength(7, 'Visitor contact number must be valid'),
-      maxLength(15, 'Visitor contact number can be a maximum of 15 digits'),
-      regex(/^[0-9]+$/, 'Visitor contact number must contain only digits (0–9)')
-    ),
-    checkin_date: pipe(string(), minLength(1, "Check-in date is required")),
-    checkin_from_time: pipe(string(), minLength(1, "Check-in from time is required")),
-    checkin_to_time: pipe(string(), minLength(1, "Check-in to time is required")),
-    no_of_persons: pipe(string(), minLength(1, "No of persons is required")),
-    vehicle_number: optional(string()),
-    category: pipe(string(), minLength(1, "Category is required")),
-    description: optional(string()),
-    check_end_date: isFrequent
-      ? pipe(string(), minLength(1, "Check end date is required"))
-      : optional(string()),
-    is_frequent: optional(boolean()),
-    apartment_id: requireApartment
-      ? pipe(string(), minLength(1, "Apartment is required"))
-      : optional(string()),
-  });
+// ---------------- Validation schema (Visitor Registration) ----------------
+const schema = object({
+  visitor_name: pipe(string(), minLength(1, 'Visitor name is required')),
+  visitor_contact: pipe(
+    string(),
+    minLength(7, 'Mobile number must be valid'),
+    maxLength(15, 'Mobile number can be a maximum of 15 digits'),
+    regex(/^[0-9]+$/, 'Mobile number must contain only digits (0–9)')
+  ),
+  email: pipe(string(), regex(/^$|^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Enter a valid email address')),
+  company: optional(string()),
+  purpose: pipe(string(), minLength(1, 'Purpose is required')),
+  host_member: pipe(string(), minLength(1, 'Host / member is required')),
+  checkin_date: pipe(string(), minLength(1, 'Visit date is required')),
+  checkin_from_time: pipe(string(), minLength(1, 'From time is required')),
+  checkin_to_time: pipe(string(), minLength(1, 'To time is required')),
+  id_proof_type: optional(string()),
+  vehicle_number: optional(string())
+})
 
-const VisitorModal = ({
-  open,
-  setIsOpen,
-  fetchVisitors,
-  datass,
-  setVisitorData,
-  createData,
-}) => {
+const emptyForm = {
+  visitor_name: '',
+  visitor_contact: '',
+  email: '',
+  company: '',
+  purpose: '',
+  host_member: '',
+  checkin_date: '',
+  checkin_from_time: '',
+  checkin_to_time: '',
+  id_proof_type: '',
+  vehicle_number: ''
+}
 
-  const { data: session } = useSession();
-  const token = session?.user?.token;
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const memberName = m => `${m?.first_name || ''} ${m?.last_name || ''}`.trim() || m?.name || m?.full_name || m?.full_Name || m?.title || 'N/A'
 
-  const [isFrequent, setFrequent] = useState(false)
+// ---------------- Add / Edit modal ----------------
+const VisitorModal = ({ open, setIsOpen, fetchVisitors, datass, setVisitorData, createData }) => {
+  const { data: session } = useSession()
+  const token = session?.user?.token
+  const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-  const requireApartment = !!(createData && createData?.apartment?.length > 1)
+  // ID proof file is kept outside react-hook-form (file input)
+  const [idProofFile, setIdProofFile] = useState(null)
 
-  const schema = useMemo(
-    () => buildSchema(isFrequent, requireApartment),
-    [isFrequent, requireApartment]
-  )
+  const members = createData?.contact || []
 
   const {
     control,
     handleSubmit,
     watch,
     reset,
-    formState: { errors },
+    formState: { errors }
   } = useForm({
     resolver: valibotResolver(schema),
-    defaultValues: {
-      user: "",
-      visitor_name: "",
-      visitor_contact: "",
-      apartment_id: "",
-      is_frequent: false,
-      checkin_date: "",
-      checkin_from_time: "",
-      checkin_to_time: "",
-      check_end_date: "",
-      no_of_persons: "1",
-      vehicle_number: "",
-      category: "",
-      description: "",
-    },
-  });
-
-  const [ownerName, setOwnerName] = useState("");
-  const [ownerPhone, setOwnerPhone] = useState("");
-
-  const selectedApartmentId = watch("apartment_id");
-
-  useEffect(() => {
-    if (createData?.apartment?.length && selectedApartmentId) {
-      const selected = createData.apartment.find(
-        (item) => String(item._id) === String(selectedApartmentId)
-      );
-
-      if (selected?.assigned_to) {
-        const firstName = selected.assigned_to.first_name || "";
-        const lastName = selected.assigned_to.last_name || "";
-        const fullName = `${firstName} ${lastName}`.trim();
-
-        setOwnerName(fullName || "N/A");
-        setOwnerPhone(selected.assigned_to.phone || "N/A");
-      } else {
-        setOwnerName("N/A");
-        setOwnerPhone("N/A");
-      }
-    } else {
-      setOwnerName("");
-      setOwnerPhone("");
-    }
-  }, [selectedApartmentId, createData]);
+    defaultValues: emptyForm
+  })
 
   const onClose = () => {
-    setVisitorData();
-    setIsOpen(false);
-    setFrequent(false);
-    reset();
-  };
+    setVisitorData(null)
+    setIsOpen(false)
+    setIdProofFile(null)
+    reset(emptyForm)
+  }
 
   useEffect(() => {
-    if (datass && open) {
+    if (!open) return
+
+    setIdProofFile(null)
+
+    if (datass) {
       reset({
-        visitor_name: datass.visitor_name || "",
-        apartment_id: datass.apartment_id?._id ? String(datass.apartment_id._id) : "",
-        visitor_contact: datass.visitor_contact_no ? String(datass.visitor_contact_no) : "",
-        checkin_date: datass.check_in_date || "",
-        checkin_from_time: datass.check_in_from_time || "",
-        checkin_to_time: datass.check_in_to_time || "",
-        check_end_date: datass?.check_end_date || "",
-        no_of_persons: datass.no_person ? String(datass.no_person) : "1",
-        vehicle_number: datass.vehicle_no || "",
-        category: datass.category?._id || "",
-        is_frequent: datass.is_frequent ?? false,
-        description: datass.description || "",
-      });
-
-      setFrequent(datass.is_frequent ?? false)
-    } else if (open) {
-      reset({
-        user: "",
-        visitor_name: "",
-        visitor_contact: "",
-        apartment_id: "",
-        is_frequent: false,
-        checkin_date: "",
-        checkin_from_time: "",
-        checkin_to_time: "",
-        check_end_date: "",
-        no_of_persons: "1",
-        vehicle_number: "",
-        category: "",
-        description: "",
-      });
-      setFrequent(false)
+        visitor_name: datass.visitor_name || '',
+        visitor_contact: datass.visitor_contact_no ? String(datass.visitor_contact_no) : '',
+        email: datass.email || '',
+        company: datass.company || '',
+        purpose: datass.purpose || '',
+        host_member: datass.host_member?._id ? String(datass.host_member._id) : datass.host_member || '',
+        checkin_date: datass.check_in_date || '',
+        checkin_from_time: datass.check_in_from_time || '',
+        checkin_to_time: datass.check_in_to_time || '',
+        id_proof_type: datass.id_proof_type || '',
+        vehicle_number: datass.vehicle_no || ''
+      })
+    } else {
+      reset(emptyForm)
     }
-  }, [datass, reset, open]);
+  }, [datass, reset, open])
 
-  // 🧠 Validation Logic (runs on submit) — times stored as "hh:mm A"
-  const validateTimes = (data) => {
-    const now = dayjs();
-    const selectedDate = dayjs(data.checkin_date);
-    const isToday = selectedDate.isSame(now, "day");
+  const checkinDate = watch('checkin_date')
+  const fromTime = watch('checkin_from_time')
+  const toTime = watch('checkin_to_time')
 
-    if (selectedDate.isBefore(now, "day")) {
-      toast.error("Visit date cannot be before today.");
-      return false;
+  const now = dayjs()
+  const isToday = !!checkinDate && dayjs(checkinDate).isSame(now, 'day')
+
+  // Runs on submit — times stored as "hh:mm A"
+  const validateTimes = data => {
+    const now = dayjs()
+    const selectedDate = dayjs(data.checkin_date)
+
+    if (selectedDate.isBefore(now, 'day')) {
+      toast.error('Visit date cannot be before today.')
+
+      return false
     }
 
-    const fromTime = dayjs(`${data.checkin_date} ${data.checkin_from_time}`, "YYYY-MM-DD hh:mm A");
-    const toTime = dayjs(`${data.checkin_date} ${data.checkin_to_time}`, "YYYY-MM-DD hh:mm A");
+    const from = dayjs(`${data.checkin_date} ${data.checkin_from_time}`, DATE_TIME_FORMAT)
+    const to = dayjs(`${data.checkin_date} ${data.checkin_to_time}`, DATE_TIME_FORMAT)
 
-    if (isToday && fromTime.isBefore(now)) {
-      toast.error("From time cannot be earlier than the current time.");
-      return false;
+    if (selectedDate.isSame(now, 'day') && from.isBefore(now)) {
+      toast.error('From time cannot be earlier than the current time.')
+
+      return false
     }
 
-    if (!toTime.isAfter(fromTime)) {
-      toast.error("End time must be later than start time.");
-      return false;
+    if (!to.isAfter(from)) {
+      toast.error('End time must be later than start time.')
+
+      return false
     }
 
-    if (isFrequent && data.check_end_date) {
-      const endDate = dayjs(data.check_end_date);
+    return true
+  }
 
-      if (endDate.isBefore(selectedDate, "day")) {
-        toast.error("Check end date cannot be before check-in date.");
-        return false;
-      }
+  const onSubmit = async data => {
+    if (!validateTimes(data)) return
+
+    if (idProofFile && idProofFile.size > 5 * 1024 * 1024) {
+      toast.error('ID proof must be smaller than 5 MB.')
+
+      return
     }
-
-    if (Number(data.no_of_persons) < 1) {
-      toast.error("No of persons must be at least 1.");
-      return false;
-    }
-
-    return true;
-  };
-
-  const onSubmit = async (data) => {
-    if (!validateTimes(data)) return;
 
     try {
+      // multipart/form-data because of the ID proof upload
+      const formData = new FormData()
+
+      Object.entries(data).forEach(([key, value]) => formData.append(key, value ?? ''))
+      if (idProofFile) formData.append('id_proof', idProofFile)
+
       const response = await fetch(
-        datass
-          ? `${API_URL}/user/visitor/update/${datass._id}`
-          : `${API_URL}/user/visitor`,
+        datass ? `${API_URL}/company/visitor/update/${datass._id}` : `${API_URL}/company/visitor`,
         {
-          method: datass ? "PUT" : "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(data),
+          method: datass ? 'PUT' : 'POST',
+
+          // Do NOT set Content-Type — the browser adds the multipart boundary
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
         }
-      );
+      )
 
       if (response.ok) {
-        toast.success(`Visitor ${datass ? "updated" : "added"} successfully`, {
-          autoClose: 1000,
-        });
-        fetchVisitors();
-        onClose();
+        toast.success(`Visitor ${datass ? 'updated' : 'added'} successfully`, { autoClose: 1000 })
+        fetchVisitors()
+        onClose()
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        toast.error(errorData?.message || "Failed to add visitor");
+        const errorData = await response.json().catch(() => ({}))
+
+        toast.error(errorData?.message || `Failed to ${datass ? 'update' : 'add'} visitor`)
       }
     } catch (error) {
-      console.error("Submit error:", error);
-      toast.error("Something went wrong. Please try again.");
+      console.error('Submit error:', error)
+      toast.error('Something went wrong. Please try again.')
     }
-  };
-
-  const checkinDate = watch("checkin_date");
-  const fromTime = watch("checkin_from_time");
-  const toTime = watch("checkin_to_time");
-
-  const now = dayjs();
-  const isToday = checkinDate && dayjs(checkinDate).isSame(now, "day");
+  }
 
   return (
     <Dialog
       fullWidth
-      maxWidth="lg"
-      scroll="body"
+      maxWidth='lg'
+      scroll='body'
       open={open}
-      sx={{ "& .MuiDialog-paper": { overflow: "visible" } }}
+      sx={{ '& .MuiDialog-paper': { overflow: 'visible' } }}
     >
       <DialogCloseButton onClick={onClose}>
-        <i className="tabler-x" />
+        <i className='tabler-x' />
       </DialogCloseButton>
-      <DialogTitle>{!datass ? "Add New Visitor" : "Edit Visitor"}</DialogTitle>
+      <DialogTitle>{!datass ? 'Add New Visitor' : 'Edit Visitor'}</DialogTitle>
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
@@ -347,12 +288,12 @@ const VisitorModal = ({
             {/* Visitor Name */}
             <Grid size={{ xs: 12, md: 6 }}>
               <Controller
-                name="visitor_name"
+                name='visitor_name'
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="Visitor Name *"
+                    label='Visitor Name *'
                     fullWidth
                     error={!!errors.visitor_name}
                     helperText={errors.visitor_name?.message}
@@ -361,306 +302,91 @@ const VisitorModal = ({
               />
             </Grid>
 
-            {/* Apartment */}
-            {requireApartment && (
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Controller
-                  name="apartment_id"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
-                      fullWidth
-                      label="Apartment*"
-                      error={!!errors.apartment_id}
-                      helperText={errors.apartment_id?.message}
-                    >
-                      {createData?.apartment?.map((item) => (
-                        <MenuItem key={item._id} value={String(item._id)}>
-                          {item.apartment_no}, {item?.tower_id?.name}, {item?.floor_id?.floor_name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                />
-              </Grid>
-            )}
-
-            {/* Contact */}
+            {/* Mobile */}
             <Grid size={{ xs: 12, md: 6 }}>
               <Controller
-                name="visitor_contact"
+                name='visitor_contact'
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="Visitor Contact No*"
+                    label='Mobile *'
                     fullWidth
                     error={!!errors.visitor_contact}
                     helperText={errors.visitor_contact?.message}
-                    inputProps={{
-                      inputMode: 'numeric',
-                      pattern: '[0-9]*',
-                    }}
-                    onChange={(e) => {
-                      const numericValue = e.target.value.replace(/\D/g, '');
-                      field.onChange(numericValue);
-                    }}
+                    inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 15 }}
+                    onChange={e => field.onChange(e.target.value.replace(/\D/g, ''))}
                   />
                 )}
               />
             </Grid>
 
-            <Grid size={{ xs: 12 }}>
-              <Controller
-                name="is_frequent"
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={!!field.value}
-                        onChange={(e) => {
-                          field.onChange(e.target.checked)
-                          setFrequent(e.target.checked)
-                        }}
-                      />
-                    }
-                    label="Frequent Visitor"
-                  />
-                )}
-              />
-            </Grid>
-
-            {selectedApartmentId && requireApartment && (
-              <Grid size={{ xs: 12 }}>
-                <Paper
-                  elevation={0}
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "grey.400",
-                    borderRadius: 2,
-                    p: 2,
-                    maxWidth: 420,
-                  }}
-                >
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Apartment Owner Name:
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 600, mt: 0.5 }}>
-                      {ownerName}
-                    </Typography>
-                  </Box>
-
-                  <Box display="flex" alignItems="center" mt={1}>
-                    <i className="tabler-phone"></i>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Apartment Owner Number:
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 600, mt: 0.5 }}>
-                        {ownerPhone}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-              </Grid>
-            )}
-
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <Grid container spacing={4}>
-                {/* DATE */}
-                <Grid size={isFrequent ? { xs: 12 } : { xs: 12, md: 6 }}>
-                  <Controller
-                    name="checkin_date"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        type="date"
-                        label="Visit Date *"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        error={!!errors.checkin_date}
-                        helperText={errors.checkin_date?.message}
-                        inputProps={{
-                          min: new Date().toISOString().split("T")[0],
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                {isFrequent && (
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <Controller
-                      name="check_end_date"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          {...field}
-                          type="date"
-                          label="Visit End Date *"
-                          fullWidth
-                          InputLabelProps={{ shrink: true }}
-                          error={!!errors.check_end_date}
-                          helperText={errors.check_end_date?.message}
-                          inputProps={{
-                            min: checkinDate || new Date().toISOString().split("T")[0],
-                          }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                )}
-
-                {/* FROM TIME */}
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <Controller
-                    name="checkin_from_time"
-                    control={control}
-                    rules={{
-                      validate: (value) => {
-                        if (!value) return "Start time is required";
-                        if (!checkinDate) return "Select visit date first";
-
-                        const from = dayjs(`${checkinDate} ${value}`, "YYYY-MM-DD hh:mm A");
-
-                        if (isToday && (from.isSame(now, "minute") || from.isBefore(now))) {
-                          return "Start time must be after current time";
-                        }
-
-                        if (toTime) {
-                          const to = dayjs(`${checkinDate} ${toTime}`, "YYYY-MM-DD hh:mm A");
-
-                          if (from.isSame(to)) return "Start time cannot equal end time";
-                          if (from.isAfter(to)) return "Start time must be before end time";
-                        }
-
-                        return true;
-                      },
-                    }}
-                    render={({ field }) => (
-                      <TimePicker
-                        label="From *"
-                        ampm
-                        value={field.value ? dayjs(field.value, "hh:mm A") : null}
-                        onChange={(newValue) => field.onChange(newValue ? newValue.format("hh:mm A") : "")}
-                        minTime={isToday ? now : undefined}
-                        maxTime={toTime ? dayjs(toTime, "hh:mm A") : undefined}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            error: !!errors.checkin_from_time,
-                            helperText: errors.checkin_from_time?.message,
-                          },
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                {/* TO TIME */}
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <Controller
-                    name="checkin_to_time"
-                    control={control}
-                    rules={{
-                      validate: (value) => {
-                        if (!value) return "End time is required";
-                        if (!checkinDate) return "Select visit date first";
-
-                        const to = dayjs(`${checkinDate} ${value}`, "YYYY-MM-DD hh:mm A");
-
-                        if (isToday && (to.isSame(now, "minute") || to.isBefore(now))) {
-                          return "End time must be after current time";
-                        }
-
-                        if (fromTime) {
-                          const from = dayjs(`${checkinDate} ${fromTime}`, "YYYY-MM-DD hh:mm A");
-
-                          if (to.isSame(from)) return "End time cannot equal start time";
-                          if (to.isBefore(from)) return "End time must be after start time";
-                        }
-
-                        return true;
-                      },
-                    }}
-                    render={({ field }) => (
-                      <TimePicker
-                        label="To *"
-                        ampm
-                        value={field.value ? dayjs(field.value, "hh:mm A") : null}
-                        onChange={(newValue) => field.onChange(newValue ? newValue.format("hh:mm A") : "")}
-                        minTime={fromTime ? dayjs(fromTime, "hh:mm A") : (isToday ? now : undefined)}
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            error: !!errors.checkin_to_time,
-                            helperText: errors.checkin_to_time?.message,
-                          },
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </LocalizationProvider>
-
-            {/* No of Persons */}
+            {/* Email */}
             <Grid size={{ xs: 12, md: 6 }}>
               <Controller
-                name="no_of_persons"
+                name='email'
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    type="number"
-                    label="No of Persons *"
+                    type='email'
+                    label='Email'
                     fullWidth
-                    error={!!errors.no_of_persons}
-                    helperText={errors.no_of_persons?.message}
-                    inputProps={{ min: 1 }}
-                    onChange={(e) => {
-                      const val = e.target.value;
-
-                      field.onChange(val === '' ? '' : String(Math.max(1, Number(val))));
-                    }}
+                    error={!!errors.email}
+                    helperText={errors.email?.message}
                   />
                 )}
               />
             </Grid>
 
-            {/* Vehicle Number */}
+            {/* Company */}
             <Grid size={{ xs: 12, md: 6 }}>
               <Controller
-                name="vehicle_number"
+                name='company'
+                control={control}
+                render={({ field }) => <TextField {...field} label='Company' fullWidth />}
+              />
+            </Grid>
+
+            {/* Purpose */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Controller
+                name='purpose'
                 control={control}
                 render={({ field }) => (
-                  <TextField {...field} label="Vehicle Number" fullWidth />
+                  <TextField
+                    {...field}
+                    label='Purpose *'
+                    fullWidth
+                    error={!!errors.purpose}
+                    helperText={errors.purpose?.message}
+                  />
                 )}
               />
             </Grid>
 
-            {/* Category */}
-            <Grid size={{ xs: 12 }}>
+            {/* Host / Member */}
+            <Grid size={{ xs: 12, md: 6 }}>
               <Controller
-                name="category"
+                name='host_member'
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
                     select
                     fullWidth
-                    label="Category *"
-                    error={!!errors.category}
-                    helperText={errors.category?.message}
+                    label='Host / Member *'
+                    error={!!errors.host_member}
+                    helperText={errors.host_member?.message}
                   >
-                    {createData?.visitorType?.map((item, index) => (
-                      <MenuItem key={item._id ?? index} value={item._id}>
-                        {item.name}
+                    {members.length === 0 && (
+                      <MenuItem value='' disabled>
+                        No members available
+                      </MenuItem>
+                    )}
+                    {members.map(item => (
+                      <MenuItem key={item._id} value={String(item._id)}>
+                        {memberName(item)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -668,18 +394,122 @@ const VisitorModal = ({
               />
             </Grid>
 
-            {/* Description */}
-            <Grid size={{ xs: 12 }}>
+            {/* Visit date / time */}
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name='checkin_date'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      type='date'
+                      label='Visit Date *'
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
+                      error={!!errors.checkin_date}
+                      helperText={errors.checkin_date?.message}
+                      inputProps={{ min: dayjs().format('YYYY-MM-DD') }}
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name='checkin_from_time'
+                  control={control}
+                  render={({ field }) => (
+                    <TimePicker
+                      label='From *'
+                      ampm
+                      value={field.value ? dayjs(field.value, TIME_FORMAT) : null}
+                      onChange={v => field.onChange(v && v.isValid() ? v.format(TIME_FORMAT) : '')}
+                      minTime={isToday ? now : undefined}
+                      maxTime={toTime ? dayjs(toTime, TIME_FORMAT) : undefined}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          error: !!errors.checkin_from_time,
+                          helperText: errors.checkin_from_time?.message
+                        }
+                      }}
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Controller
+                  name='checkin_to_time'
+                  control={control}
+                  render={({ field }) => (
+                    <TimePicker
+                      label='To *'
+                      ampm
+                      value={field.value ? dayjs(field.value, TIME_FORMAT) : null}
+                      onChange={v => field.onChange(v && v.isValid() ? v.format(TIME_FORMAT) : '')}
+                      minTime={fromTime ? dayjs(fromTime, TIME_FORMAT) : isToday ? now : undefined}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          error: !!errors.checkin_to_time,
+                          helperText: errors.checkin_to_time?.message
+                        }
+                      }}
+                    />
+                  )}
+                />
+              </Grid>
+            </LocalizationProvider>
+
+            {/* ID proof type */}
+            <Grid size={{ xs: 12, md: 4 }}>
               <Controller
-                name="description"
+                name='id_proof_type'
+                control={control}
+                render={({ field }) => (
+                  <TextField {...field} select fullWidth label='ID Proof Type'>
+                    <MenuItem value=''>None</MenuItem>
+                    {ID_PROOF_TYPES.map(t => (
+                      <MenuItem key={t} value={t}>
+                        {t}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+              />
+            </Grid>
+
+            {/* ID proof file */}
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Button variant='outlined' component='label' fullWidth sx={{ height: 56 }}>
+                {idProofFile ? idProofFile.name : datass?.id_proof ? 'Replace ID Proof' : 'Upload ID Proof'}
+                <input
+                  hidden
+                  type='file'
+                  accept='image/*,.pdf'
+                  onChange={e => setIdProofFile(e.target.files?.[0] || null)}
+                />
+              </Button>
+              {datass?.id_proof && !idProofFile && (
+                <Typography variant='caption' color='text.secondary'>
+                  Current: {datass.id_proof}
+                </Typography>
+              )}
+            </Grid>
+
+            {/* Vehicle Number */}
+            <Grid size={{ xs: 12, md: 4 }}>
+              <Controller
+                name='vehicle_number'
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
+                    label='Vehicle Number'
                     fullWidth
-                    multiline
-                    minRows={3}
-                    label="Description"
+                    onChange={e => field.onChange(e.target.value.toUpperCase())}
                   />
                 )}
               />
@@ -687,162 +517,146 @@ const VisitorModal = ({
           </Grid>
         </DialogContent>
 
-        <DialogActions sx={{ justifyContent: "center", gap: 2 }}>
-          <Button variant="contained" type="submit">
+        <DialogActions sx={{ justifyContent: 'center', gap: 2 }}>
+          <Button variant='contained' type='submit'>
             Submit
           </Button>
-          <Button variant="outlined" color="error" onClick={onClose}>
+          <Button variant='outlined' color='error' onClick={onClose}>
             Cancel
           </Button>
         </DialogActions>
       </form>
     </Dialog>
-  );
-};
+  )
+}
 
+// ---------------- QR / OTP modal ----------------
 const OTPCodeModal = ({ open, setOpenDialog, code, data }) => {
-
-  const onClose = () => {
-    setOpenDialog(false)
-  }
+  const onClose = () => setOpenDialog(false)
 
   return (
     <Dialog
       fullWidth
-      maxWidth="xs"
-      scroll="body"
+      maxWidth='xs'
+      scroll='body'
       open={open}
       onClose={onClose}
       sx={{
-        "& .MuiDialog-paper": {
-          overflow: "visible",
+        '& .MuiDialog-paper': {
+          overflow: 'visible',
           borderRadius: 4,
-          boxShadow: "0px 6px 20px rgba(0,0,0,0.15)",
-        },
+          boxShadow: '0px 6px 20px rgba(0,0,0,0.15)'
+        }
       }}
     >
       <DialogCloseButton onClick={onClose}>
-        <i className="tabler-x" />
+        <i className='tabler-x' />
       </DialogCloseButton>
 
       <DialogTitle
         sx={{
-          textAlign: "center",
+          textAlign: 'center',
           fontWeight: 600,
-          background: "linear-gradient(90deg, #7e57c2, #26a69a)",
-          color: "white",
+          background: 'linear-gradient(90deg, #7e57c2, #26a69a)',
+          color: 'white',
           py: 2,
-          fontSize: "1.2rem",
+          fontSize: '1.2rem',
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
-          boxShadow: "0px 2px 6px rgba(0,0,0,0.2)",
+          boxShadow: '0px 2px 6px rgba(0,0,0,0.2)'
         }}
       >
         Visitor
       </DialogTitle>
 
-      <DialogContent sx={{ textAlign: "center", mt: 2, px: 3 }}>
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            justifyContent: "center",
-            alignItems: "center",
-            mb: 2,
-            mt: 4
-          }}
-        >
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: "15px" }}>
-            <strong>{data?.user_id?.first_name} {data?.user_id?.last_name}</strong> has invited you to <strong>apartment {data?.apartment_id?.apartment_no}</strong>, <strong>{data?.apartment_id?.tower_id?.name}</strong>, <strong>{data?.apartment_id?.floor_id?.floor_name}</strong>
+      <DialogContent sx={{ textAlign: 'center', mt: 2, px: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2, mt: 4 }}>
+          <Typography variant='body2' color='text.secondary' sx={{ fontSize: '15px' }}>
+            <strong>{data?.visitor_name}</strong>
+            {data?.company ? <> from <strong>{data.company}</strong></> : null} is visiting{' '}
+            <strong>{memberName(data?.host_member)}</strong>
+            {data?.purpose ? <> for <strong>{data.purpose}</strong></> : null}
           </Typography>
         </Box>
 
-        <Typography color="text.secondary" gutterBottom>
+        <Typography color='text.secondary' gutterBottom>
           Show this QR code or OTP to the guard at the gate
         </Typography>
 
-        <Box sx={{ my: 3, display: "flex", justifyContent: "center" }}>
+        <Box sx={{ my: 3, display: 'flex', justifyContent: 'center' }}>
           <Box
-            sx={{
-              p: 2,
-              backgroundColor: "#fff",
-              borderRadius: 2,
-              boxShadow: "0px 3px 10px rgba(0,0,0,0.15)",
-            }}
+            sx={{ p: 2, backgroundColor: '#fff', borderRadius: 2, boxShadow: '0px 3px 10px rgba(0,0,0,0.15)' }}
           >
-            <QRCodeCanvas
-              value={String(code)}
-              size={120}
-              bgColor="#ffffff"
-              fgColor="#000000"
-              level="H"
-              includeMargin={true}
-            />
+            <QRCodeCanvas value={String(code)} size={120} bgColor='#ffffff' fgColor='#000000' level='H' includeMargin />
           </Box>
         </Box>
 
-        <Typography variant="body2" fontWeight={600} sx={{ my: 1 }}>
+        <Typography variant='body2' fontWeight={600} sx={{ my: 1 }}>
           — OR —
         </Typography>
 
         <Box
           sx={{
-            background: "linear-gradient(135deg, #ff9800, #ff7043)",
-            color: "#fff",
+            background: 'linear-gradient(135deg, #ff9800, #ff7043)',
+            color: '#fff',
             fontWeight: 700,
-            fontSize: "2rem",
+            fontSize: '2rem',
             borderRadius: 2,
-            display: "inline-block",
+            display: 'inline-block',
             px: 4,
             py: 1,
             my: 2,
             letterSpacing: 2,
-            boxShadow: "0px 4px 12px rgba(0,0,0,0.2)",
+            boxShadow: '0px 4px 12px rgba(0,0,0,0.2)'
           }}
         >
           {code}
         </Box>
 
-        <Typography
-          variant="body2"
-          sx={{ fontStyle: "italic", mt: 4, mb: 4, fontWeight: 500 }}
-          color="text.primary"
-        >
-          <strong>{data?.check_in_date}</strong>, <strong>{data?.check_in_from_time}</strong> to <strong>{data?.check_in_to_time}</strong>
+        <Typography variant='body2' sx={{ fontStyle: 'italic', mt: 4, mb: 4, fontWeight: 500 }} color='text.primary'>
+          <strong>{data?.check_in_date}</strong>, <strong>{data?.check_in_from_time}</strong> to{' '}
+          <strong>{data?.check_in_to_time}</strong>
         </Typography>
 
-        <Typography variant="body2" color="text.secondary">
+        {data?.vehicle_no && (
+          <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
+            Vehicle: <strong>{data.vehicle_no}</strong>
+          </Typography>
+        )}
+
+        <Typography variant='body2' color='text.secondary'>
           DW cowork, Deoria Road, near zoo, Gorakhpur, UP, 273004
         </Typography>
 
         <Box sx={{ my: 3 }}>
           <img
-            src="/images/company_logo.png"
-            alt="Logo"
+            src='/images/company_logo.png'
+            alt='Logo'
             style={{
               width: 100,
-              margin: "0 auto",
-              display: "block",
-              filter: "drop-shadow(0px 2px 4px rgba(0,0,0,0.2))",
+              margin: '0 auto',
+              display: 'block',
+              filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.2))'
             }}
           />
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ justifyContent: "center", pb: 2, mb: 8 }}>
-        <Typography variant="body1" fontWeight={600} color="text.secondary">
+      <DialogActions sx={{ justifyContent: 'center', pb: 2, mb: 8 }}>
+        <Typography variant='body1' fontWeight={600} color='text.secondary'>
           <strong>DW cowork</strong>
         </Typography>
       </DialogActions>
     </Dialog>
-  );
+  )
 }
 
+// ---------------- Visitor list ----------------
 const VisitorTable = () => {
-
   const { data: session } = useSession()
   const token = session?.user?.token
   const API_URL = process.env.NEXT_PUBLIC_API_URL
+  const public_url = process.env.NEXT_PUBLIC_ASSETS_URL
 
   const [rowSelection, setRowSelection] = useState({})
   const [data, setData] = useState([])
@@ -850,11 +664,9 @@ const VisitorTable = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [visitorData, setVisitorData] = useState(null)
   const [code, setCode] = useState('')
-  const [visitorId, setVisitorId] = useState('')
   const [createData, setCreateData] = useState(null)
-  const [category, setCategory] = useState('')
-  const [nameNo, setNameNo] = useState('')
-  const [globalFilter, setGlobalFilter] = useState('')
+  const [otpFilter, setOtpFilter] = useState('')
+  const [searchText, setSearchText] = useState('')
 
   const [confirmDialog, setConfirmDialog] = useState(false)
   const [submitDialog, setSubmitDialog] = useState(false)
@@ -864,10 +676,9 @@ const VisitorTable = () => {
   const getPermissions = usePermissionList()
   const [permissions, setPermissions] = useState({})
 
-  const public_url = process.env.NEXT_PUBLIC_ASSETS_URL;
-
   const getAvatar = ({ avatar, fullName }) => {
     if (avatar) return <CustomAvatar src={`${public_url}/uploads/visitor/${avatar}`} size={34} />
+
     return <CustomAvatar size={34}>{getInitials(fullName || '')}</CustomAvatar>
   }
 
@@ -875,6 +686,7 @@ const VisitorTable = () => {
     const fetchPermissions = async () => {
       try {
         const result = await getPermissions()
+
         setPermissions(result)
       } catch (error) {
         console.error('Error fetching permissions:', error)
@@ -886,7 +698,7 @@ const VisitorTable = () => {
 
   const fetchVisitors = async () => {
     try {
-      const response = await fetch(`${API_URL}/user/visitor`, {
+      const response = await fetch(`${API_URL}/company/visitor`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -901,7 +713,7 @@ const VisitorTable = () => {
 
   const fetchCreateData = async () => {
     try {
-      const response = await fetch(`${API_URL}/user/visitor/create/data`, {
+      const response = await fetch(`${API_URL}/company/visitor/create/data`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -919,28 +731,20 @@ const VisitorTable = () => {
       fetchVisitors()
       fetchCreateData()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API_URL, token])
 
   const handleFinalSubmit = async () => {
     try {
       const allow = selectedAction === 'accept'
 
-      const response = await fetch(
-        `${API_URL}/user/visitor/allow/gateIn/${allow}/${selectedVisitorId}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-        }
-      )
+      const response = await fetch(`${API_URL}/company/visitor/allow/gateIn/${allow}/${selectedVisitorId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+      })
 
       if (response.ok) {
-        toast.success(`Visitor ${allow ? 'accepted' : 'rejected'} successfully`, {
-          autoClose: 1000
-        })
-
+        toast.success(`Visitor ${allow ? 'accepted' : 'rejected'} successfully`, { autoClose: 1000 })
         fetchVisitors()
       } else {
         toast.error('Action failed, please try again')
@@ -956,21 +760,22 @@ const VisitorTable = () => {
   }
 
   const filteredData = useMemo(() => {
-    return data.filter((row) => {
-      const otpMatch =
-        row?.otp?.toString().includes(globalFilter) || globalFilter === ''
+    const q = searchText.trim().toLowerCase()
 
-      const nameNoMatch =
-        row?.visitor_name?.toLowerCase().includes(nameNo.toLowerCase()) ||
-        row?.visitor_contact_no?.toString()?.includes(nameNo) ||
-        nameNo === ''
+    return data.filter(row => {
+      const otpMatch = otpFilter === '' || row?.otp?.toString().includes(otpFilter)
 
-      const categoryName = row?.category?.name || ''
-      const categoryMatch = !category || categoryName === category
+      const searchMatch =
+        q === '' ||
+        row?.visitor_name?.toLowerCase().includes(q) ||
+        row?.visitor_contact_no?.toString().includes(q) ||
+        row?.company?.toLowerCase().includes(q) ||
+        row?.email?.toLowerCase().includes(q) ||
+        row?.vehicle_no?.toLowerCase().includes(q)
 
-      return otpMatch && nameNoMatch && categoryMatch
+      return otpMatch && searchMatch
     })
-  }, [data, globalFilter, nameNo, category])
+  }, [data, otpFilter, searchText])
 
   const columns = useMemo(
     () => [
@@ -995,71 +800,86 @@ const VisitorTable = () => {
         id: 'visitor',
         header: 'Visitor',
         cell: ({ row }) => (
-          <div className="flex items-center gap-4">
-            {getAvatar({
-              avatar: row.original.photo,
-              fullName: row.original.visitor_name
-            })}
-            <div className="flex flex-col">
-              <Typography color="text.primary" className="font-medium">
+          <div className='flex items-center gap-4'>
+            {getAvatar({ avatar: row.original.photo, fullName: row.original.visitor_name })}
+            <div className='flex flex-col'>
+              <Typography color='text.primary' className='font-medium'>
                 {row.original.visitor_name ?? ''}
               </Typography>
-              <Typography variant="body2">{row.original.visitor_contact_no}</Typography>
+              <Typography variant='body2'>{row.original.visitor_contact_no}</Typography>
+              {row.original.email && <Typography variant='body2'>{row.original.email}</Typography>}
             </div>
           </div>
         )
       }),
-      columnHelper.accessor('category.name', {
-        header: 'Category',
-        cell: (info) => <Typography>{info.getValue() || '-'}</Typography>
+      columnHelper.accessor('company', {
+        header: 'Company',
+        cell: info => <Typography>{info.getValue() || '-'}</Typography>
+      }),
+      columnHelper.accessor('purpose', {
+        header: 'Purpose',
+        cell: info => <Typography>{info.getValue() || '-'}</Typography>
+      }),
+      columnHelper.display({
+        id: 'host_member',
+        header: 'Host / Member',
+        cell: ({ row }) => (
+          <Typography>{row.original.host_member ? memberName(row.original.host_member) : '-'}</Typography>
+        )
+      }),
+      columnHelper.accessor('check_in_date', {
+        header: 'Visit date & time',
+        cell: ({ row }) => (
+          <Typography>
+            {row.original.check_in_date || '-'} <br />
+            {row.original.check_in_from_time} - {row.original.check_in_to_time}
+          </Typography>
+        )
+      }),
+      columnHelper.display({
+        id: 'id_proof',
+        header: 'ID Proof',
+        cell: ({ row }) =>
+          row.original.id_proof ? (
+            <a
+              href={`${public_url}/uploads/visitor/${row.original.id_proof}`}
+              target='_blank'
+              rel='noopener noreferrer'
+            >
+              {row.original.id_proof_type || 'View'}
+            </a>
+          ) : (
+            <Typography>-</Typography>
+          )
+      }),
+      columnHelper.accessor('vehicle_no', {
+        header: 'Vehicle No.',
+        cell: info => <Typography>{info.getValue() || '-'}</Typography>
       }),
       columnHelper.accessor('otp', {
         header: 'OTP',
         cell: ({ row }) => (
           <Typography>
             <i
-              className="tabler-eye"
+              className='tabler-eye'
               style={{ cursor: 'pointer', transition: '0.2s' }}
               onClick={() => {
                 setOpenDialog(true)
-                setVisitorId(row.original._id)
                 setVisitorData(row.original)
                 setCode(row.original.otp || '')
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.2)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.2)')}
+              onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
             ></i>
           </Typography>
         )
       }),
-      columnHelper.accessor('check_in_date', {
-        header: 'Visit in date & time',
-        cell: ({ row }) => {
-          const time1 = row.original.check_in_from_time
-          const time2 = row.original.check_in_to_time
-
-          return (
-            <Typography>
-              {row.original.check_in_date || '-'} <br />
-              {time1} - {time2}
-            </Typography>
-          )
-        }
-      }),
-      columnHelper.accessor('gate_in_allow', {
+      columnHelper.accessor('visitor_status', {
         header: 'Gate in allow',
-        cell: ({ row }) => {
-          const values = {
-            "1": "Invited",
-            "2": "Rejected",
-            "3": "Expired",
-            "4": "Accepted",
-            "5": "Rejected"
-          }
-
-          return row.original.visitor_status === "1" ? (
+        cell: ({ row }) =>
+          row.original.visitor_status === '1' ? (
             <Button
-              variant="outlined"
+              variant='outlined'
               onClick={() => {
                 setSelectedVisitorId(row.original._id)
                 setConfirmDialog(true)
@@ -1068,23 +888,12 @@ const VisitorTable = () => {
               Allow
             </Button>
           ) : (
-            values[row.original.visitor_status] || "-"
+            STATUS_LABELS[row.original.visitor_status] || '-'
           )
-        },
-      }),
-      columnHelper.accessor('no_person', {
-        header: 'No. Person',
-        cell: (info) => <Typography>{info.getValue() || '-'}</Typography>
-      }),
-      columnHelper.accessor('description', {
-        header: 'Description',
-        cell: (info) => <Typography>{info.getValue() || '-'}</Typography>
       }),
       columnHelper.accessor('created_at', {
         header: 'Created At',
-        cell: ({ row }) => (
-          <Typography>{FormatTime(row.original.created_at) || '-'}</Typography>
-        )
+        cell: ({ row }) => <Typography>{FormatTime(row.original.created_at) || '-'}</Typography>
       }),
       columnHelper.display({
         id: 'action',
@@ -1092,7 +901,7 @@ const VisitorTable = () => {
         cell: ({ row }) =>
           row.original.status ? null : (
             <i
-              className="tabler-edit"
+              className='tabler-edit'
               style={{ cursor: 'pointer', transition: '0.2s' }}
               onClick={() => {
                 setVisitorData(row.original)
@@ -1102,7 +911,8 @@ const VisitorTable = () => {
           )
       })
     ],
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [public_url]
   )
 
   const table = useReactTable({
@@ -1113,18 +923,18 @@ const VisitorTable = () => {
     enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: setRowSelection
   })
 
   return (
     <Card>
-      <CardContent className="flex justify-between flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-2">
+      <CardContent className='flex justify-between flex-col gap-4 sm:flex-row sm:items-center'>
+        <div className='flex items-center gap-2'>
           <Typography>Show</Typography>
           <CustomTextField
             select
             value={table.getState().pagination.pageSize}
-            onChange={(e) => table.setPageSize(Number(e.target.value))}
+            onChange={e => table.setPageSize(Number(e.target.value))}
           >
             <MenuItem value={10}>10</MenuItem>
             <MenuItem value={25}>25</MenuItem>
@@ -1132,58 +942,35 @@ const VisitorTable = () => {
           </CustomTextField>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className='flex flex-wrap gap-2'>
+          <DebouncedInput value={otpFilter} placeholder='OTP' onChange={v => setOtpFilter(String(v))} />
           <DebouncedInput
-            value={globalFilter}
-            placeholder="OTP"
-            onChange={(value) => setGlobalFilter(String(value))}
+            value={searchText}
+            placeholder='Name / mobile / company / vehicle'
+            onChange={v => setSearchText(String(v))}
           />
-          <DebouncedInput
-            value={nameNo}
-            placeholder="Visitor name/contact no"
-            onChange={(value) => setNameNo(String(value))}
-          />
-          <CustomTextField
-            select
-            className="w-[250px]"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <MenuItem value="">Select Category</MenuItem>
-            <MenuItem value="Allow kids">Allow kids</MenuItem>
-            <MenuItem value="Courier">Courier</MenuItem>
-            <MenuItem value="Driver">Driver</MenuItem>
-            <MenuItem value="Friend/relatives">Friend/relatives</MenuItem>
-            <MenuItem value="Helper/maid">Helper/maid</MenuItem>
-            <MenuItem value="Others">Others</MenuItem>
-            <MenuItem value="Technician">Technician</MenuItem>
-          </CustomTextField>
 
-          {permissions?.['hasVisitorAddPermission'] && (
-            <Button
-              variant="contained"
-              startIcon={<i className="tabler-plus" />}
-              onClick={() => {
-                setVisitorData(null)
-                setIsOpen(true)
-              }}
-            >
-              Add Visitor
-            </Button>
-          )}
+          <Button
+            variant='contained'
+            startIcon={<i className='tabler-plus' />}
+            onClick={() => {
+              setVisitorData(null)
+              setIsOpen(true)
+            }}
+          >
+            Add Visitor
+          </Button>
         </div>
       </CardContent>
 
-      <div className="overflow-x-auto">
+      <div className='overflow-x-auto'>
         <table className={tableStyles.table}>
           <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers.map(header => (
                   <th key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
               </tr>
@@ -1192,20 +979,15 @@ const VisitorTable = () => {
           <tbody>
             {table.getRowModel().rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={table.getVisibleFlatColumns().length}
-                  className="text-center"
-                >
+                <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
                   No data available
                 </td>
               </tr>
             ) : (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map(row => (
                 <tr key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                   ))}
                 </tr>
               ))
@@ -1225,13 +1007,7 @@ const VisitorTable = () => {
         createData={createData}
       />
 
-      <OTPCodeModal
-        open={openDialog}
-        setOpenDialog={setOpenDialog}
-        code={code}
-        id={visitorId}
-        data={visitorData}
-      />
+      <OTPCodeModal open={openDialog} setOpenDialog={setOpenDialog} code={code} data={visitorData} />
 
       <Dialog open={confirmDialog} onClose={() => setConfirmDialog(false)}>
         <DialogTitle>Allow Visitor</DialogTitle>
@@ -1240,8 +1016,8 @@ const VisitorTable = () => {
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center' }}>
           <Button
-            variant="contained"
-            color="primary"
+            variant='contained'
+            color='primary'
             onClick={() => {
               setSelectedAction('accept')
               setConfirmDialog(false)
@@ -1251,8 +1027,8 @@ const VisitorTable = () => {
             Accept
           </Button>
           <Button
-            variant="outlined"
-            color="error"
+            variant='outlined'
+            color='error'
             onClick={() => {
               setSelectedAction('reject')
               setConfirmDialog(false)
@@ -1267,15 +1043,12 @@ const VisitorTable = () => {
       <Dialog open={submitDialog} onClose={() => setSubmitDialog(false)}>
         <DialogTitle>Confirm Submission</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to{' '}
-            {selectedAction === 'accept' ? 'accept' : 'reject'} this visitor?
-          </Typography>
+          <Typography>Are you sure you want to {selectedAction === 'accept' ? 'accept' : 'reject'} this visitor?</Typography>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center' }}>
           <Button onClick={() => setSubmitDialog(false)}>Cancel</Button>
           <Button
-            variant="contained"
+            variant='contained'
             color={selectedAction === 'accept' ? 'success' : 'error'}
             onClick={handleFinalSubmit}
           >

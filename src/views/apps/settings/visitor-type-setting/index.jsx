@@ -28,7 +28,7 @@ const AmenityTypes = () => {
   async function fetchTowerData() {
 
     try {
-      const response = await fetch(`${URL}/company/amenity-type`,
+      const response = await fetch(`${URL}/company/visitor-type`,
         {
           method: "GET",
           headers: {

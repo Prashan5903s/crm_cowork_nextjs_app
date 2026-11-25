@@ -362,7 +362,6 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
               <MenuItem href={`/${locale}/apps/settings/amenity-type-setting`}>{'Amenity Types'}</MenuItem>
               <MenuItem href={`/${locale}/apps/settings/contact-category-setting`}>{'Contact Category'}</MenuItem>
               <MenuItem href={`/${locale}/apps/settings/contract-document-type-setting`}>{'Contract Document Type'}</MenuItem>
-              <MenuItem href={`/${locale}/apps/settings/vendor-category-setting`}>{'Vendor Category'}</MenuItem>
 
               <SubMenu label={'Lead'}>
                 <MenuItem href={`/${locale}/apps/settings/lead-purpose-setting`}>{'Lead Purpose'}</MenuItem>
@@ -379,6 +378,10 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
                 <MenuItem href={`/${locale}/apps/settings/property-category-setting`}>{'Property Categories'}</MenuItem>
                 <MenuItem href={`/${locale}/apps/settings/property-group-setting`}>{'Property Groups'}</MenuItem>
               </SubMenu>
+
+              <MenuItem href={`/${locale}/apps/settings/vendor-category-setting`}>{'Vendor Category'}</MenuItem>
+              <MenuItem href={`/${locale}/apps/settings/visitor-type-setting`}>{'Visitor Type'}</MenuItem>
+
             </SubMenu>
           )}
         </MenuSection>

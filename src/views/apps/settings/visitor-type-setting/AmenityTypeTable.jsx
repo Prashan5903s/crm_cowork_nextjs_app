@@ -43,7 +43,7 @@ import TablePaginationComponent from '@components/TablePaginationComponent'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
-import AmenityTypeDialog from '@/components/dialogs/amenity-type-dialog/page'
+import AmenityTypeDialog from '@/components/dialogs/visitor-type-dialog/page'
 import { usePermissionList } from '@/utils/getPermission'
 
 // Filter function
