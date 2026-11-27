@@ -332,6 +332,15 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
           )}
           {permissArray?.isCompany && (
             <MenuItem
+              key='complaints'
+              href={`/${locale}/apps/complain`}
+              icon={<i className='tabler-message-report' />}
+            >
+              Complaints
+            </MenuItem>
+          )}
+          {permissArray?.isCompany && (
+            <MenuItem
               href={`/${locale}/apps/invoices`}
               icon={<i className='tabler-file-invoice' />}
             >
@@ -347,14 +356,12 @@ const VerticalMenu = ({ dictionary, scrollMenu }) => {
             </MenuItem>
           )}
 
-          {permissArray?.isCompany && (
-            <MenuItem
-              href={`/${locale}/apps/visitor`}
-              icon={<i className='tabler-credit-card' />}
-            >
-              Visitor
-            </MenuItem>
-          )}
+          <MenuItem
+            href={`/${locale}/apps/visitor`}
+            icon={<i className='tabler-user-check' />}
+          >
+            Visitor
+          </MenuItem>
 
           {/* {permissArray?.isCompany && (
             <SubMenu label={'Report'} icon={<i className='tabler-graph' />}>

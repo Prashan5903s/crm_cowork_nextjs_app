@@ -8,15 +8,13 @@ import PermissionGuard from '@/hocs/PermissionClientGuard'
 
 const ComplainDashboard = () => {
 
-    const { lang: locale } = useParams();
+  const { lang: locale } = useParams();
 
-    return (
-        <>
-            <PermissionGuard locale={locale} element="hasComplainPermission">
-                <Complain />
-            </PermissionGuard>
-        </>
-    )
+  return (
+    <>
+      <Complain />
+    </>
+  )
 }
 
 export default ComplainDashboard;
